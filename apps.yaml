@@ -1,0 +1,11 @@
+schedule:
+  module: schedule
+  class: Schedule
+
+living_room:
+  module: living_room
+  class: LivingRoom
+
+geolocation:
+  module: geolocation
+  class: Geolocation
