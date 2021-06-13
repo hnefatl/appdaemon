@@ -9,3 +9,7 @@ living_room:
 geolocation:
   module: geolocation
   class: Geolocation
+
+pager:
+  module: pager
+  class: Pager
