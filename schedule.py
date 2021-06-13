@@ -69,6 +69,7 @@ class Schedule(hass.Hass):
           await self.scene_turn_on('scene.bedroom_dim')
           await self.scene_turn_on('scene.living_room_dim')
           await self.scene_turn_on('scene.office_room_dim')
+          await self.scene_turn_on('scene.corridor_dim')
         elif self._state == State.SUN_UP:
           await self.light_turn_off('group.bedroom_lights')
 
