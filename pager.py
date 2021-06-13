@@ -23,6 +23,10 @@ class Pager(hass.Hass):
       self.log('Not a page')
       return
 
+    await self.red_alert()
+
+  # Renamed in honour of Maximus
+  async def red_alert(self):
     bedroom_light_on = await self.get_state('group.bedroom_lights') == 'on'
 
     self.log(f'Confirmed page, subject: {attributes.get("subject")}')
