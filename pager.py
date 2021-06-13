@@ -1,6 +1,8 @@
-import appdaemon.plugins.hass.hassapi as hass
+import asyncio
 import base64
 import re
+
+import appdaemon.plugins.hass.hassapi as hass
 
 IMAP_SENSOR = 'sensor.imap_hnefatl'
 # Minor obfuscation to hide google service from scrapers
@@ -8,6 +10,10 @@ PAGER_SERVICE_REGEX = base64.b64decode('LipAYWNrXC5tb25pdG9yaW5nXC5nb29nbGVcLmNv
 LIGHT_FLASH_COUNT = 3
 
 class Pager(hass.Hass):
+  def __init__(self, *args, **kwargs):
+    super().__init__(*args, **kwargs)
+    self._lock = asyncio.Lock()
+
   def initialize(self):
     self.log('Starting Pager service')
     self.log(f'Using pager service regex: "{PAGER_SERVICE_REGEX}"')
@@ -23,20 +29,21 @@ class Pager(hass.Hass):
       self.log('Not a page')
       return
 
+    self.log(f'Confirmed page, subject: {attributes.get("subject")}')
     await self.red_alert()
 
   # Renamed in honour of Maximus
   async def red_alert(self):
-    bedroom_light_on = await self.get_state('group.bedroom_lights') == 'on'
+    async with self._lock:
+      bedroom_light_on = await self.get_state('group.bedroom_lights') == 'on'
 
-    self.log(f'Confirmed page, subject: {attributes.get("subject")}')
-    for i in range(LIGHT_FLASH_COUNT):
-      self.call_service('scene/turn_on', entity_id='scene.bedroom_red')
-      self.call_service('scene/turn_on', entity_id='scene.office_red')
-      await self.sleep(1)
-      self.call_service('scene/turn_on', entity_id='scene.bedroom_dim')
-      self.call_service('scene/turn_on', entity_id='scene.office_concentrate')
-      await self.sleep(1)
+      for i in range(LIGHT_FLASH_COUNT):
+        self.call_service('scene/turn_on', entity_id='scene.bedroom_red')
+        self.call_service('scene/turn_on', entity_id='scene.office_red')
+        await self.sleep(1)
+        self.call_service('scene/turn_on', entity_id='scene.bedroom_dim')
+        self.call_service('scene/turn_on', entity_id='scene.office_concentrate')
+        await self.sleep(1)
 
-    if not bedroom_light_on:
-      await self.call_service('light/turn_off', entity_id='group.bedroom_lights')
+      if not bedroom_light_on:
+        await self.call_service('light/turn_off', entity_id='group.bedroom_lights')
