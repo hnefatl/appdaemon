@@ -68,7 +68,7 @@ class Schedule(hass.Hass):
         if self._state == State.SUN_DOWN:
           await self.scene_turn_on('scene.bedroom_dim')
           await self.scene_turn_on('scene.living_room_dim')
-          await self.scene_turn_on('scene.office_room_dim')
+          await self.scene_turn_on('scene.office_dim')
           await self.scene_turn_on('scene.corridor_dim')
         elif self._state == State.SUN_UP:
           await self.light_turn_off('group.bedroom_lights')
@@ -114,6 +114,8 @@ class Schedule(hass.Hass):
       callback_handle = None
       callback_handle_lock = asyncio.Lock() # Guard against concurrent callbacks
       async def flic_click_callback(event, data, kwargs):
+        nonlocal callback_handle
+        nonlocal play_alarm
         if data.get('click_type') != 'single':
           return
         async with callback_handle_lock:
@@ -122,7 +124,6 @@ class Schedule(hass.Hass):
           await self.cancel_listen_event(callback_handle)
           callback_handle = None
 
-        nonlocal play_alarm
         async with media_player_lock:
           self.log('Stopping alarm')
           if play_alarm:

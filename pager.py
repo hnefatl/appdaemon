@@ -4,9 +4,7 @@ import re
 
 import appdaemon.plugins.hass.hassapi as hass
 
-IMAP_SENSOR = 'sensor.imap_hnefatl'
-# Minor obfuscation to hide google service from scrapers
-PAGER_SERVICE_REGEX = base64.b64decode('LipAYWNrXC5tb25pdG9yaW5nXC5nb29nbGVcLmNvbSQ=').decode()
+IMAP_SENSOR = 'sensor.imap_hnefatl_pager'
 LIGHT_FLASH_COUNT = 3
 
 class Pager(hass.Hass):
@@ -16,7 +14,6 @@ class Pager(hass.Hass):
 
   def initialize(self):
     self.log('Starting Pager service')
-    self.log(f'Using pager service regex: "{PAGER_SERVICE_REGEX}"')
     self.listen_state(
       entity=IMAP_SENSOR, attribute='all', callback=self.on_email)
 
@@ -25,9 +22,6 @@ class Pager(hass.Hass):
     attributes = state_info.get('attributes', {})
     sender = attributes.get('from')
     self.log(f'Email from: {sender}')
-    if not sender or not re.match(PAGER_SERVICE_REGEX, sender):
-      self.log('Not a page')
-      return
 
     self.log(f'Confirmed page, subject: {attributes.get("subject")}')
     await self.red_alert()
