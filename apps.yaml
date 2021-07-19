@@ -13,3 +13,7 @@ geolocation:
 pager:
   module: pager
   class: Pager
+  username: !secret pager_email_username
+  password: !secret pager_email_password
+  email_to: !secret pager_email_to
+  emails_from: !secret pager_emails_from
