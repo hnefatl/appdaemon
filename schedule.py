@@ -41,6 +41,9 @@ class Schedule(hass.Hass):
       callback=self.on_bedroom_button_click)
     await self.listen_state(
       entity='calendar.home_assistant',
+      # Get the entire state dict containing the event title etc, not just the
+      # "state" attribute.
+      attribute='all',
       callback=self.on_calendar_event,
     )
 
@@ -72,14 +75,15 @@ class Schedule(hass.Hass):
         elif self._state == State.SUN_UP:
           await self.light_turn_off('group.bedroom_lights')
 
-  async def on_calendar_event(self, _, data, *args):
+  async def on_calendar_event(self, _, __, data, *args):
     self.log(f'Calendar event: {data}')
-    title = data.get('message', None)
+    attributes = data.get('attributes', {})
+    title = attributes.get('message', None)
     if not title:
       return
 
     command_function = self._command_mappings.get(title, self.default_calendar_handler)
-    await command_function(data)
+    await command_function(attributes)
 
   async def default_calendar_handler(self, event):
     self.log(f'Loading scenes from event: {event}')
