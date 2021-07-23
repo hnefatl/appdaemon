@@ -66,7 +66,8 @@ class Pager(hass.Hass):
     while True:
       self._connection.idle()
       idle_responses = self._connection.idle_check(timeout=IMAP_IDLE_TIMEOUT)
-      self.log(f'IMAP notification: {idle_responses}')
+      if idle_responses:
+        self.log(f'IMAP notification: {idle_responses}')
       self._connection.idle_done()
       if not idle_responses:
         # No responses, we must have timed out: refresh the connection to

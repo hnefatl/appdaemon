@@ -4,7 +4,6 @@ import enum
 import json
 from typing import List
 
-EVENT_PREFIX = 'HA: '
 BEDROOM_BUTTON = 'flic_80e4da77f54b'
 
 class State(enum.Enum):
@@ -40,8 +39,8 @@ class Schedule(hass.Hass):
       event='flic_click',
       button_name=BEDROOM_BUTTON,
       callback=self.on_bedroom_button_click)
-    await self.listen_event(
-      event='google_calendar_event',
+    await self.listen_state(
+      entity='calendar.home_assistant',
       callback=self.on_calendar_event,
     )
 
@@ -75,12 +74,11 @@ class Schedule(hass.Hass):
 
   async def on_calendar_event(self, _, data, *args):
     self.log(f'Calendar event: {data}')
-    title = data.get('title', None)
-    if not title or not title.startswith(EVENT_PREFIX):
+    title = data.get('message', None)
+    if not title:
       return
 
-    command = title[len(EVENT_PREFIX):]
-    command_function = self._command_mappings.get(command, self.default_calendar_handler)
+    command_function = self._command_mappings.get(title, self.default_calendar_handler)
     await command_function(data)
 
   async def default_calendar_handler(self, event):
