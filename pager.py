@@ -28,7 +28,10 @@ class Pager(hass.Hass):
 
     # Create a string like 'OR (FROM a) (OR (FROM b) (FROM c))' (parentheses
     # for emphasis only) to filter against multiple sender emails.
-    joined_from_emails = functools.reduce(lambda l, r: f'OR {l} {r}', map(lambda s: f'FROM {s}', self._from_emails))
+    if self._from_emails:
+      joined_from_emails = functools.reduce(lambda l, r: f'OR {l} {r}', map(lambda s: f'FROM {s}', self._from_emails))
+    else:
+      joined_from_emails = ''
     self._search_string = f'TO {self._to_email} {joined_from_emails} NOT KEYWORD {PROCESSED_KEYWORD}'
 
   def initialize(self):

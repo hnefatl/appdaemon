@@ -5,6 +5,7 @@ import json
 from typing import List
 
 BEDROOM_BUTTON = 'flic_80e4da77f54b'
+VACUUM_ENTITY_ID = 'vacuum.roborock_s6'
 
 class State(enum.Enum):
   SUN_DOWN = 1
@@ -75,8 +76,14 @@ class Schedule(hass.Hass):
         elif self._state == State.SUN_UP:
           await self.light_turn_off('group.bedroom_lights')
 
-  async def on_calendar_event(self, _, __, data, *args):
+  async def on_calendar_event(self, _, state, data, *args):
     self.log(f'Calendar event: {data}')
+    # Only trigger on the rising edge (unintuitively, this is when the state
+    # isn't "already" on)
+    if state == 'on':
+      self.log("Skipping event as it's falling edge.")
+      return
+
     attributes = data.get('attributes', {})
     title = attributes.get('message', None)
     if not title:
@@ -100,66 +107,70 @@ class Schedule(hass.Hass):
 
     # Prevent any other state changes while we're in sequence
     async with self._state_lock:
-      original_state = self._state
-      self._state = State.IN_WAKEUP
+      try:
+        original_state = self._state
+        self._state = State.IN_WAKEUP
 
-      self.log('Loading wakeup scenes')
-      await self.apply_scenes_from_event(event)
+        self.log('Loading wakeup scenes')
+        await self.apply_scenes_from_event(event)
 
-      # Start listening for a button press to signal "I'm awake"
-      media_player_lock = asyncio.Lock()
-      # None represents "not yet started", True is started, False is stopped or
-      # should not start.
-      play_alarm = None
-      alarm_stopped = asyncio.Event()
+        # Start listening for a button press to signal "I'm awake"
+        media_player_lock = asyncio.Lock()
+        # None represents "not yet started", True is started, False is stopped or
+        # should not start.
+        play_alarm = None
+        alarm_stopped = asyncio.Event()
 
-      callback_handle = None
-      callback_handle_lock = asyncio.Lock() # Guard against concurrent callbacks
-      async def flic_click_callback(event, data, kwargs):
-        nonlocal callback_handle
-        nonlocal play_alarm
-        if data.get('click_type') != 'single':
-          return
-        async with callback_handle_lock:
-          if callback_handle is None:
+        callback_handle = None
+        callback_handle_lock = asyncio.Lock() # Guard against concurrent callbacks
+        async def flic_click_callback(event, data, kwargs):
+          nonlocal callback_handle
+          nonlocal play_alarm
+          if data.get('click_type') != 'single':
             return
-          await self.cancel_listen_event(callback_handle)
-          callback_handle = None
+          async with callback_handle_lock:
+            if callback_handle is None:
+              return
+            await self.cancel_listen_event(callback_handle)
+            callback_handle = None
+
+          async with media_player_lock:
+            self.log('Stopping alarm')
+            if play_alarm:
+              await self.call_service(
+                'media_player/media_stop',
+                entity_id='media_player.bedroom_speaker')
+            play_alarm = False
+            alarm_stopped.set()
+
+        callback_handle = await self.listen_event(
+          event='flic_click',
+          button_name=BEDROOM_BUTTON,
+          timeout=ALARM_INITIAL_DELAY + ALARM_DURATION,
+          callback=flic_click_callback)
+
+        # Wait before starting to play the alarm, in case the lights are
+        # sufficient to wake up.
+        await asyncio.sleep(ALARM_INITIAL_DELAY)
 
         async with media_player_lock:
-          self.log('Stopping alarm')
-          if play_alarm:
+          # If we've not been told to stop the alarm already, play it
+          if play_alarm is None:
+            self.log('Starting alarm')
+            play_alarm = True
             await self.call_service(
-              'media_player/media_stop',
-              entity_id='media_player.bedroom_speaker')
-          play_alarm = False
-          alarm_stopped.set()
+              'media_player/play_media',
+              entity_id='media_player.bedroom_speaker',
+              media_content_id='http://192.168.0.2:8123/local/alarm.mp3',
+              media_content_type='music')
 
-      callback_handle = await self.listen_event(
-        event='flic_click',
-        button_name=BEDROOM_BUTTON,
-        timeout=ALARM_INITIAL_DELAY + ALARM_DURATION,
-        callback=flic_click_callback)
-
-      # Wait before starting to play the alarm, in case the lights are
-      # sufficient to wake up.
-      await asyncio.sleep(ALARM_INITIAL_DELAY)
-
-      async with media_player_lock:
-        # If we've not been told to stop the alarm already, play it
-        if play_alarm is None:
-          self.log('Starting alarm')
-          play_alarm = True
-          await self.call_service(
-            'media_player/play_media',
-            entity_id='media_player.bedroom_speaker',
-            media_content_id='http://192.168.0.2:8123/local/alarm.mp3',
-            media_content_type='music')
-
-      # Wait until either the button is pressed or the alarm finishes. We still
-      # hold the state r+w locks, so no other state changes can happen.
-      await asyncio.wait_for(alarm_stopped.wait(), timeout=ALARM_DURATION)
-      self._state = original_state
+        # Wait until either the button is pressed or the alarm finishes. We still
+        # hold the state r+w locks, so no other state changes can happen.
+        await asyncio.wait_for(alarm_stopped.wait(), timeout=ALARM_DURATION)
+      except:
+        # Always reset state, even if an error happens.
+        self._state = original_state
+        raise
     # release state r+w locks
 
     await asyncio.sleep(30 * 60) # 30mins
@@ -172,7 +183,7 @@ class Schedule(hass.Hass):
     for scene_data in scenes.get('scenes', [scenes]):
       await self.scene_turn_on(**scene_data)
 
-  async def on_hoover(self, _):
+  async def on_hoover(self, *args, **kwargs):
     await self.activate_hoover()
 
   async def light_turn_off(self, entity_id, **kwargs):
@@ -183,6 +194,6 @@ class Schedule(hass.Hass):
     self.log(f'Turning on scene: {entity_id}: {kwargs}')
     await self.call_service('scene/turn_on', entity_id=entity_id, **kwargs)
 
-  async def activate_hoover(self, _):
+  async def activate_hoover(self):
     self.log('Activating hoover')
-    await self.call_service('vacuum/start', 'vacuum.hoover')
+    await self.call_service('vacuum/start', entity_id=VACUUM_ENTITY_ID)
