@@ -1,4 +1,4 @@
-import appdaemon.plugins.hass.hassapi as hass
+import appdaemon.plugins.hass.hassapi as hass  # type: ignore
 import asyncio
 import enum
 import json

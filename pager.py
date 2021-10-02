@@ -5,7 +5,7 @@ import functools
 import imapclient
 import re
 
-import appdaemon.plugins.hass.hassapi as hass
+import appdaemon.plugins.hass.hassapi as hass  # type: ignore
 
 LIGHT_FLASH_COUNT = 3
 
