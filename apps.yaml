@@ -1,6 +1,6 @@
-schedule:
-  module: schedule
-  class: Schedule
+#schedule:
+#  module: schedule
+#  class: Schedule
 
 living_room:
   module: living_room
@@ -17,3 +17,7 @@ pager:
   password: !secret pager_email_password
   email_to: !secret pager_email_to
   emails_from: !secret pager_emails_from
+
+button_playground:
+  module: buttons
+  class: ButtonPlayground
