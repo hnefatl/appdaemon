@@ -1,5 +1,6 @@
 from __future__ import annotations
-import appdaemon.plugins.hass.hassapi as hass
+
+import appdaemon.plugins.hass.hassapi as hass  # type: ignore
 import abc
 import asyncio
 import enum
@@ -11,6 +12,7 @@ from typing import (
     List,
     Optional,
     Mapping,
+    Set,
     Tuple,
     TypeVar,
 )
@@ -21,71 +23,86 @@ class ButtonPress(enum.Enum):
     HOLD = 2
 
 
-# Identifies a single physical Button on a ButtonDevice (must be hashable).
-ButtonKey = TypeVar("ButtonKey", bound=Hashable)
+# Identifies a single physical Button on a ButtonDevice. Some buttons have
+# multiple ids (e.g. on the IKEA remote, there's different numbers for a button
+# being tapped or held), so this has to be something generic and we need to
+# treat it flexibly.
+ButtonType = TypeVar("ButtonType", bound=Button)  # type: ignore
+ButtonDataType = TypeVar("ButtonDataType")
 ButtonPressCallback = Callable[[ButtonPress], None]
 
 
-class ButtonDevice(abc.ABC, Generic[ButtonKey]):
+class ButtonDevice(abc.ABC, Generic[ButtonType, ButtonDataType]):
     """A device with one or more buttons."""
 
     def __init__(self, hassio: hass.Hass, name: Optional[str]):
         self._hass = hassio
-        self._listeners: DefaultDict[ButtonKey, list[ButtonPressCallback]] = DefaultDict(list)
+        self._listeners: DefaultDict[ButtonType, list[ButtonPressCallback]] = DefaultDict(list)
         self._listeners_lock = asyncio.Lock()
         self._name = name
 
-    async def _on_press(self, button_key: ButtonKey, press: ButtonPress):
+    async def _on_press(self, button_data: ButtonDataType, press: ButtonPress):
         """Run all the callbacks for a press of a specific button."""
         async with self._listeners_lock:
-            button_listeners = self._listeners.get(button_key)
-            if button_listeners is None:
-                return
-            while button_listeners:
-                button_listeners[0](press)
-                button_listeners.pop()
+            for button, listeners in self._listeners.items():
+                if not button.matches_button_data(button_data):
+                    continue
+                while listeners:
+                    listeners[0](press)
+                    listeners.pop()
 
     @abc.abstractmethod
-    def get_all_buttons(self):
+    def get_all_buttons(self) -> List[ButtonType]:
         pass
 
-    async def _add_button_press_callback(self, button_key: ButtonKey, callback: ButtonPressCallback):
+    async def _add_button_press_callback(self, button: ButtonType, callback: ButtonPressCallback):
         async with self._listeners_lock:
-            self._listeners[button_key].append(callback)
+            self._listeners[button].append(callback)
 
     def __str__(self):
         return self._name if self._name else "unnamed device"
 
-    class Button:
-        """A single logical button on a ButtonDevice."""
 
-        def __init__(self, name: Optional[str], button_device: ButtonDevice, button_key: ButtonKey):
-            self._name = name
-            self._button_device = button_device
-            self._button_key = button_key
+class Button(abc.ABC, Generic[ButtonDataType]):
+    """A single logical button on a ButtonDevice."""
 
-        async def wait_for_press(self) -> Optional[ButtonPress]:
-            out = None
-            event = asyncio.Event()
+    def __init__(self, name: Optional[str], button_device: ButtonDevice):
+        self._name = name
+        self._button_device = button_device
 
-            def callback(press):
-                nonlocal out
-                out = press
-                event.set()
+    async def wait_for_press(self) -> Optional[ButtonPress]:
+        out = None
+        event = asyncio.Event()
 
-            await self._button_device._add_button_press_callback(self._button_key, callback)
-            await event.wait()
-            return out
+        def callback(press):
+            nonlocal out
+            out = press
+            event.set()
 
-        def __str__(self):
-            button_name = self._name if self._name else "unnamed button"
-            return f"{button_name} on {self._button_device}"
+        await self._button_device._add_button_press_callback(self, callback)
+        await event.wait()
+        return out
+
+    @abc.abstractmethod
+    def matches_button_data(self, button_data: ButtonDataType) -> bool:
+        """Return true iff this button matches the identifying data."""
+        pass
+
+    def __str__(self):
+        button_name = self._name if self._name else "unnamed button"
+        return f"{button_name} on {self._button_device}"
 
 
-ZhaButtonKey = Tuple[int]
+class ZhaButton(Button[Tuple[int, ...]]):
+    def __init__(self, name, button_device, zha_button_args: Set[Tuple[int, ...]]):
+        super().__init__(name, button_device)
+        self._zha_button_args = zha_button_args
+
+    def matches_button_data(self, button_data: Tuple[int, ...]) -> bool:
+        return button_data in self._zha_button_args
 
 
-class ZhaButtonDevice(ButtonDevice[ZhaButtonKey]):
+class ZhaButtonDevice(ButtonDevice[ZhaButton, Tuple[int, ...]]):
     def __init__(
         self,
         hassio: hass.Hass,
@@ -120,11 +137,11 @@ class IkeaRemote(ZhaButtonDevice):
         }
         super().__init__(hassio, "IKEA Remote", device_id, _command_press_mapping)
 
-        self.centre_button = ButtonDevice.Button("Centre", self, ())
-        self.top_button = ButtonDevice.Button("Top", self, (0, 43, 5))
-        self.bottom_button = ButtonDevice.Button("Bottom", self, (1, 43, 5))
-        self.left_button = ButtonDevice.Button("Left", self, (257, 13, 0))
-        self.right_button = ButtonDevice.Button("Right", self, (256, 13, 0))
+        self.centre_button = ZhaButton("Centre", self, {()})
+        self.top_button = ZhaButton("Top", self, {(0, 43, 5), (0, 84)})
+        self.bottom_button = ZhaButton("Bottom", self, {(1, 43, 5), (1, 84)})
+        self.left_button = ZhaButton("Left", self, {(257, 13, 0), (3329, 0)})
+        self.right_button = ZhaButton("Right", self, {(256, 13, 0), (3328, 0)})
 
     def get_all_buttons(self):
         return [self.centre_button, self.top_button, self.bottom_button, self.left_button, self.right_button]
@@ -139,13 +156,16 @@ class ButtonPlayground(hass.Hass):
         self.log("Starting button playground")
         buttons = self._ikea_remote.get_all_buttons()
 
-        async def print_when_pressed(button: ButtonDevice.Button):
+        async def print_when_pressed(button: Button):
             while True:
                 press_type = await button.wait_for_press()
+                if press_type is None:
+                    continue
                 readable_press = {ButtonPress.SINGLE: "pressed", ButtonPress.HOLD: "held"}.get(press_type)
                 self.log(f"Button {readable_press}: {button}")
 
         async def main(*_, **__):
             await asyncio.wait([print_when_pressed(button) for button in buttons])
 
+        # Don't block the initialize function.
         self.run_in(callback=main, delay=0)
