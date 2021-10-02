@@ -4,7 +4,7 @@ import enum
 import json
 from typing import List
 
-BEDROOM_BUTTON = 'flic_80e4da77f54b'
+BEDROOM_BUTTON = '406a8b92e13d77d79941d59e37f03211'
 VACUUM_ENTITY_ID = 'vacuum.roborock_s6'
 
 class State(enum.Enum):
@@ -37,8 +37,8 @@ class Schedule(hass.Hass):
     await self.run_at_sunrise(callback=self.on_sun_change, state=State.SUN_UP)
     await self.run_at_sunset(callback=self.on_sun_change, state=State.SUN_DOWN)
     await self.listen_event(
-      event='flic_click',
-      button_name=BEDROOM_BUTTON,
+      event='zha_event',
+      device_id=BEDROOM_BUTTON,
       callback=self.on_bedroom_button_click)
     await self.listen_state(
       entity='calendar.home_assistant',
@@ -56,17 +56,17 @@ class Schedule(hass.Hass):
 
   async def on_bedroom_button_click(self, _, data, __):
     self.log(f'Bedroom button click: {data}')
-    click_type = data.get('click_type')
+    command = data.get('command')
     async with self._state_lock:
       self.log(f'Current state: {self._state}')
-      if click_type == 'single':
+      if command == 'toggle':
         if self._state == State.SUN_DOWN:
           await self.light_turn_off('group.all_lights')
         elif self._state == State.SUN_UP:
           await self.scene_turn_on('scene.bedroom_bright')
         else:
           self.log('Ignoring press, it conflicts with wakeup.')
-      elif click_type == 'double':
+      elif command == 'step_with_on_off':
         # Double press is essentially the opposite of single press
         if self._state == State.SUN_DOWN:
           await self.scene_turn_on('scene.bedroom_dim')
@@ -76,12 +76,12 @@ class Schedule(hass.Hass):
         elif self._state == State.SUN_UP:
           await self.light_turn_off('group.bedroom_lights')
 
-  async def on_calendar_event(self, _, state, data, *args):
+  async def on_calendar_event(self, _, __, data, *___, **____):
     self.log(f'Calendar event: {data}')
-    # Only trigger on the rising edge (unintuitively, this is when the state
-    # isn't "already" on)
-    if state == 'on':
-      self.log("Skipping event as it's falling edge.")
+    # For some reason these events trigger 3 times, off-on-off. The on event
+    # is actually at the end of the event, not the start.
+    if data.get('state') != 'on':
+      self.log("Skipping event as state isn't 'on'.")
       return
 
     attributes = data.get('attributes', {})
@@ -126,7 +126,7 @@ class Schedule(hass.Hass):
         async def flic_click_callback(event, data, kwargs):
           nonlocal callback_handle
           nonlocal play_alarm
-          if data.get('click_type') != 'single':
+          if data.get('command') != 'toggle':
             return
           async with callback_handle_lock:
             if callback_handle is None:
@@ -144,8 +144,8 @@ class Schedule(hass.Hass):
             alarm_stopped.set()
 
         callback_handle = await self.listen_event(
-          event='flic_click',
-          button_name=BEDROOM_BUTTON,
+          event='zha_event',
+          device_id=BEDROOM_BUTTON,
           timeout=ALARM_INITIAL_DELAY + ALARM_DURATION,
           callback=flic_click_callback)
 
@@ -178,7 +178,11 @@ class Schedule(hass.Hass):
     await self.light_turn_off('group.bedroom_lights')
 
   async def apply_scenes_from_event(self, event):
-    scenes = json.loads(event.get('description', ''))
+    description = event.get('description')
+    if not description:
+      self.log('No description for calendar event')
+      return
+    scenes = json.loads(description)
     self.log(f'Applying scenes: {scenes}')
     for scene_data in scenes.get('scenes', [scenes]):
       await self.scene_turn_on(**scene_data)
