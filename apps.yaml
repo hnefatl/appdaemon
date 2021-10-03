@@ -21,3 +21,7 @@ pager:
 #button_playground:
 #  module: buttons
 #  class: ButtonPlayground
+
+light_manager_playground:
+  module: light_manager_playground
+  class: LightManagerPlayground

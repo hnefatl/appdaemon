@@ -27,7 +27,7 @@ class ButtonPress(enum.Enum):
 # multiple ids (e.g. on the IKEA remote, there's different numbers for a button
 # being tapped or held), so this has to be something generic and we need to
 # treat it flexibly.
-ButtonType = TypeVar("ButtonType", bound=Button)  # type: ignore
+ButtonType = TypeVar("ButtonType", bound=Button)
 ButtonDataType = TypeVar("ButtonDataType")
 ButtonPressCallback = Callable[[ButtonPress], None]
 
@@ -63,6 +63,9 @@ class ButtonDevice(abc.ABC, Generic[ButtonType, ButtonDataType]):
         return self._name if self._name else "unnamed device"
 
 
+# This could probably be rewritten so that all devices share the same dumb button class, and the device itself
+# implements the data->button logic. Then we'd only need to be generic in ButtonDataType and we avoid needing to define
+# minor classes like ZhaButton.
 class Button(abc.ABC, Generic[ButtonDataType]):
     """A single logical button on a ButtonDevice."""
 
