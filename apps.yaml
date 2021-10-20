@@ -1,6 +1,14 @@
-schedule:
-  module: schedule
-  class: Schedule
+zha_buttons:
+  module: zha_buttons
+  class: ZhaButtonEvents
+
+default_scene_service:
+  module: default_scene_service
+  class: DefaultSceneService
+
+#schedule:
+#  module: schedule
+#  class: Schedule
 
 living_room:
   module: living_room
@@ -22,6 +30,6 @@ pager:
 #  module: buttons
 #  class: ButtonPlayground
 
-light_manager_playground:
-  module: light_manager_playground
-  class: LightManagerPlayground
+#light_manager_playground:
+#  module: light_manager_playground
+#  class: LightManagerPlayground
