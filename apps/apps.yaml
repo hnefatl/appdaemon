@@ -10,14 +10,6 @@ default_scene_service:
 #  module: schedule
 #  class: Schedule
 
-living_room:
-  module: living_room
-  class: LivingRoom
-
-geolocation:
-  module: geolocation
-  class: Geolocation
-
 pager:
   module: pager
   class: Pager
@@ -25,11 +17,3 @@ pager:
   password: !secret pager_email_password
   email_to: !secret pager_email_to
   emails_from: !secret pager_emails_from
-
-#button_playground:
-#  module: buttons
-#  class: ButtonPlayground
-
-#light_manager_playground:
-#  module: light_manager_playground
-#  class: LightManagerPlayground
