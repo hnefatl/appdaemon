@@ -1,1 +1,8 @@
-*.pyc
+**/*.pyc
+**/.mypycache/
+compiled/
+
+# Maybe these should be included, not sure yet since not used.
+dashboards/
+namespaces/
+www/
