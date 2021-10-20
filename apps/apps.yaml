@@ -6,6 +6,10 @@ default_scene_service:
   module: default_scene_service
   class: DefaultSceneService
 
+buttons:
+  module: buttons
+  class: Buttons
+
 pager:
   module: pager
   class: Pager

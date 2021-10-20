@@ -1,3 +1,4 @@
+from __future__ import annotations
 import abc
 import enum
 from typing import Any, Dict, Tuple, Optional
@@ -15,13 +16,6 @@ class ButtonPress(enum.Enum):
     HOLD = enum.auto()
 
 
-def button_press_to_string(press: ButtonPress) -> str:
-    out = {ButtonPress.SINGLE: "single", ButtonPress.HOLD: "hold"}.get(press)
-    if out is None:
-        raise ValueError(f"Unknown ButtonPress {press}")
-    return out
-
-
 class Button(abc.ABC):
     def __init__(self, name: str):
         self.name = name
@@ -29,6 +23,24 @@ class Button(abc.ABC):
     @abc.abstractmethod
     def get_press_info(self, command: str, args: Tuple[int, ...]) -> Optional[Tuple[ButtonName, ButtonPress]]:
         pass
+
+
+def button_click_to_event_kwargs(device: Button, button: ButtonName, press: ButtonPress) -> Optional[Dict[str, str]]:
+    return {"device": device.name, "button": button, "press": press.name.lower()}
+
+
+def button_click_from_event_kwargs(kwargs: Dict[str, str]) -> Optional[Tuple[Button, ButtonName, ButtonPress]]:
+    device_name = kwargs.get("device")
+    button = kwargs.get("button")
+    press_name = kwargs.get("press")
+    if device_name is None or button is None or press_name is None:
+        return None
+
+    press = next((press for press in ButtonPress if press.name == press_name.upper()), None)
+    device = next((device for device in DEVICE_MAPPING.values() if device.name == device_name), None)
+    if press is None or device is None:
+        return None
+    return (device, button, press)
 
 
 class IkeaRemote(Button):
@@ -107,9 +119,8 @@ class ZhaButtonEvents(hass.Hass):
 
         result = device.get_press_info(command, tuple(args))
         if result is None:
-            self.log(f"Unknown press: command={command}, args={args}")
-            return
+            return None
         (button, press) = result
 
         self.log(f"{press} on {device.name} {button}")
-        self.fire_event(EVENT_TYPE, device=device.name, button=button, press=button_press_to_string(press))
+        self.fire_event(EVENT_TYPE, **button_click_to_event_kwargs(device, button, press))
