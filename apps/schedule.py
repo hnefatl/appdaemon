@@ -4,7 +4,7 @@ import enum
 import json
 from typing import List
 
-BEDROOM_BUTTON = "406a8b92e13d77d79941d59e37f03211"
+# BEDROOM_BUTTON = "406a8b92e13d77d79941d59e37f03211"
 VACUUM_ENTITY_ID = "vacuum.roborock_s6"
 
 
@@ -38,7 +38,7 @@ class Schedule(hass.Hass):
 
         await self.run_at_sunrise(callback=self.on_sun_change, state=State.SUN_UP)
         await self.run_at_sunset(callback=self.on_sun_change, state=State.SUN_DOWN)
-        await self.listen_event(event="zha_event", device_id=BEDROOM_BUTTON, callback=self.on_bedroom_button_click)
+        # await self.listen_event(event="zha_event", device_id=BEDROOM_BUTTON, callback=self.on_bedroom_button_click)
         await self.listen_state(
             entity="calendar.home_assistant",
             # Get the entire state dict containing the event title etc, not just the

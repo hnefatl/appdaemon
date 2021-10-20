@@ -6,10 +6,6 @@ default_scene_service:
   module: default_scene_service
   class: DefaultSceneService
 
-#schedule:
-#  module: schedule
-#  class: Schedule
-
 pager:
   module: pager
   class: Pager
