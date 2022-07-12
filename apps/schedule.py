@@ -36,8 +36,12 @@ class Schedule(hass.Hass):
             self._state = State.SUN_DOWN
         self.log(f"Initialised state to: {self._state}")
 
-        await self.run_at_sunrise(callback=self.on_sun_change, state=State.SUN_UP)
-        await self.run_at_sunset(callback=self.on_sun_change, state=State.SUN_DOWN)
+        await self.run_at_sunrise(
+            callback=self.on_sun_change, state=State.SUN_UP
+        )
+        await self.run_at_sunset(
+            callback=self.on_sun_change, state=State.SUN_DOWN
+        )
         # await self.listen_event(event="zha_event", device_id=BEDROOM_BUTTON, callback=self.on_bedroom_button_click)
         await self.listen_state(
             entity="calendar.home_assistant",
@@ -88,7 +92,9 @@ class Schedule(hass.Hass):
         if not title:
             return
 
-        command_function = self._command_mappings.get(title, self.default_calendar_handler)
+        command_function = self._command_mappings.get(
+            title, self.default_calendar_handler
+        )
         await command_function(attributes)
 
     async def default_calendar_handler(self, event):
@@ -101,7 +107,9 @@ class Schedule(hass.Hass):
             await self.apply_scenes_from_event(event)
 
     async def on_wakeup(self, event):
-        ALARM_INITIAL_DELAY = 5  # 5s, how long to wait before starting the alarm
+        ALARM_INITIAL_DELAY = (
+            5  # 5s, how long to wait before starting the alarm
+        )
         ALARM_DURATION = 5 * 60  # 5min, how long the alarm audio file is
 
         # Prevent any other state changes while we're in sequence
@@ -121,7 +129,9 @@ class Schedule(hass.Hass):
                 alarm_stopped = asyncio.Event()
 
                 callback_handle = None
-                callback_handle_lock = asyncio.Lock()  # Guard against concurrent callbacks
+                callback_handle_lock = (
+                    asyncio.Lock()
+                )  # Guard against concurrent callbacks
 
                 async def flic_click_callback(event, data, kwargs):
                     nonlocal callback_handle
@@ -137,7 +147,10 @@ class Schedule(hass.Hass):
                     async with media_player_lock:
                         self.log("Stopping alarm")
                         if play_alarm:
-                            await self.call_service("media_player/media_stop", entity_id="media_player.bedroom_speaker")
+                            await self.call_service(
+                                "media_player/media_stop",
+                                entity_id="media_player.bedroom_speaker",
+                            )
                         play_alarm = False
                         alarm_stopped.set()
 
@@ -166,7 +179,9 @@ class Schedule(hass.Hass):
 
                 # Wait until either the button is pressed or the alarm finishes. We still
                 # hold the state r+w locks, so no other state changes can happen.
-                await asyncio.wait_for(alarm_stopped.wait(), timeout=ALARM_DURATION)
+                await asyncio.wait_for(
+                    alarm_stopped.wait(), timeout=ALARM_DURATION
+                )
             except:
                 # Always reset state, even if an error happens.
                 self._state = original_state
