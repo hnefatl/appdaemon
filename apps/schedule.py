@@ -160,7 +160,7 @@ class Schedule(hass.Hass):
                         await self.call_service(
                             "media_player/play_media",
                             entity_id="media_player.bedroom_speaker",
-                            media_content_id="http://192.168.0.2:8123/local/alarm.mp3",
+                            media_content_id="http://10.20.1.2:8123/local/alarm.mp3",
                             media_content_type="music",
                         )
 
