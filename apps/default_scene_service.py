@@ -122,4 +122,9 @@ class DefaultSceneService(hass.Hass):
             self.log(f"Loading default scene for {room}: {scene}")
             if scene is None:
                 continue
-            self.turn_on(entity_id=scene, transition=transition)
+            # Passing a None transition fails, and I suspect a transition of 0
+            # might be different to "no transition"...
+            optional_transition = (
+                {} if transition is None else {"transition": transition}
+            )
+            self.turn_on(entity_id=scene, **optional_transition)
