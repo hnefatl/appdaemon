@@ -22,7 +22,8 @@ class Room(enum.Enum):
     LIVING_ROOM = enum.auto()
     OFFICE = enum.auto()
     CORRIDOR = enum.auto()
-    ENTRYWAY = enum.auto()
+    ENTRANCE = enum.auto()
+
 
 ROOM_NAME_MAPPING = {room.name.lower(): room for room in list(Room)}
 
@@ -30,7 +31,13 @@ ROOM_NAME_MAPPING = {room.name.lower(): room for room in list(Room)}
 def get_day_stable_random(seed: int, values: Dict[T, int]) -> T:
     """Get a random value which is stable throughout a given day for the same given seed."""
     # Get the timestamp for the start of "today"
-    today_seed = int((datetime.datetime.combine(datetime.date.today(), datetime.datetime.min.time())).timestamp())
+    today_seed = int(
+        (
+            datetime.datetime.combine(
+                datetime.date.today(), datetime.datetime.min.time()
+            )
+        ).timestamp()
+    )
     rand = random.Random(today_seed + seed)
 
     # The order of keys and values within the dict are the same
@@ -53,22 +60,28 @@ class DefaultSceneService(hass.Hass):
         super().__init__(*args, **kwargs)
 
     def initialize(self):
-        self.listen_event(event=EVENT_NAME, callback=self._turn_on_default_scene)
+        self.listen_event(
+            event=EVENT_NAME, callback=self._turn_on_default_scene
+        )
 
     def _get_default_scene_for_room(self, room: Room) -> Optional[str]:
         weekday = datetime.datetime.now().weekday()
         hour = datetime.datetime.now().hour
 
         # In the late evening and early morning, default to dim lights in all rooms.
-        if between_hours(hour, 23, 3):
+        if between_hours(hour, 0, 3):
             return f"scene.{room.name.lower()}_dim"
 
-        if room in {Room.BEDROOM, Room.CORRIDOR, Room.ENTRYWAY}:
+        if room in {Room.BEDROOM, Room.CORRIDOR, Room.ENTRANCE}:
             return f"scene.{room.name.lower()}_bright"
         elif room is Room.LIVING_ROOM:
             # Bias slightly towards preferred living room lights, with a chance for something different.
             return get_day_stable_random(
-                room.value, {"scene.living_room_spring_blossom": 2, "scene.living_room_ibiza": 1}
+                room.value,
+                {
+                    "scene.living_room_spring_blossom": 2,
+                    "scene.living_room_ibiza": 1,
+                },
             )
         elif room is Room.OFFICE:
             keith_ooo = self.get_state(entity_id="binary_sensor.keith_ooo")
@@ -77,25 +90,34 @@ class DefaultSceneService(hass.Hass):
             if weekday < 5 and hour < 15 and not keith_ooo:
                 return "scene.office_concentrate"
             return get_day_stable_random(
-                room.value, {"scene.office_savannah_sunset": 2, "scene.office_tropical_twilight": 1}
+                room.value,
+                {
+                    "scene.office_savanna_sunset": 2,
+                    "scene.office_tropical_twilight": 1,
+                    "scene.office_soho": 1,
+                },
             )
         return None
 
-    def _turn_on_default_scene(self, _event_name: str, data: Dict[str, Any], _kwargs: Dict[str, Any]):
+    def _turn_on_default_scene(self, _event_name: str, data: Dict[str, Any]):
         room_names = data.get("rooms", None)
-        assert isinstance(room_names, list), f"room names passed to {EVENT_NAME} must be a list, got: {room_names}"
+        assert isinstance(
+            room_names, list
+        ), f"room names passed to {EVENT_NAME} must be a list, got: {room_names}"
         transition = data.get("transition", None)
         assert transition is None or isinstance(
             transition, int
         ), f"transition passed to {EVENT_NAME} must be an int, got: {transition}"
 
         for room_name in room_names:
-            assert isinstance(room_name, str), f"room name passed to {EVENT_NAME} must be a str, got: {room_name}"
+            assert isinstance(
+                room_name, str
+            ), f"room name passed to {EVENT_NAME} must be a str, got: {room_name}"
             room = ROOM_NAME_MAPPING.get(room_name)
             if room is None:
                 continue
             scene = self._get_default_scene_for_room(room)
             self.log(f"Loading default scene for {room}: {scene}")
-            if scene is not None:
-                optional_transition = {} if transition is None else {"transition": transition}
-                self.call_service("scene/turn_on", entity_id=scene, **optional_transition)
+            if scene is None:
+                continue
+            self.turn_on(entity_id=scene, transition=transition)
