@@ -21,23 +21,43 @@ class Button(abc.ABC):
         self.name = name
 
     @abc.abstractmethod
-    def get_press_info(self, command: str, args: Tuple[int, ...]) -> Optional[Tuple[ButtonName, ButtonPress]]:
+    def get_press_info(
+        self, command: str, args: Tuple[int, ...]
+    ) -> Optional[Tuple[ButtonName, ButtonPress]]:
         pass
 
 
-def button_click_to_event_kwargs(device: Button, button: ButtonName, press: ButtonPress) -> Optional[Dict[str, str]]:
-    return {"device": device.name, "button": button, "press": press.name.lower()}
+def button_click_to_event_kwargs(
+    device: Button, button: ButtonName, press: ButtonPress
+) -> Optional[Dict[str, str]]:
+    return {
+        "device": device.name,
+        "button": button,
+        "press": press.name.lower(),
+    }
 
 
-def button_click_from_event_kwargs(kwargs: Dict[str, str]) -> Optional[Tuple[Button, ButtonName, ButtonPress]]:
+def button_click_from_event_kwargs(
+    kwargs: Dict[str, str]
+) -> Optional[Tuple[Button, ButtonName, ButtonPress]]:
     device_name = kwargs.get("device")
     button = kwargs.get("button")
     press_name = kwargs.get("press")
     if device_name is None or button is None or press_name is None:
         return None
 
-    press = next((press for press in ButtonPress if press.name == press_name.upper()), None)
-    device = next((device for device in DEVICE_MAPPING.values() if device.name == device_name), None)
+    press = next(
+        (press for press in ButtonPress if press.name == press_name.upper()),
+        None,
+    )
+    device = next(
+        (
+            device
+            for device in DEVICE_MAPPING.values()
+            if device.name == device_name
+        ),
+        None,
+    )
     if press is None or device is None:
         return None
     return (device, button, press)
@@ -48,8 +68,8 @@ class IkeaRemote(Button):
         (): "centre",
         (0, 43, 5): "top",
         (0, 84): "top",
-        (1, 43, 5): "bottom",
-        (1, 84): "bottom",
+        (1, 43, 5, 0, 0): "bottom",
+        (1, 84, 0, 0): "bottom",
         (257, 13, 0): "left",
         (3329, 0): "left",
         (256, 13, 0): "right",
@@ -65,23 +85,25 @@ class IkeaRemote(Button):
         "hold": ButtonPress.HOLD,  # left and right buttons
     }
 
-    def get_press_info(self, command: str, args: Tuple[int, ...]) -> Optional[Tuple[ButtonName, ButtonPress]]:
+    def get_press_info(
+        self, command: str, args: Tuple[int, ...]
+    ) -> Optional[Tuple[ButtonName, ButtonPress]]:
         button = self.ARGS_BUTTON_MAPPING.get(tuple(args))
         if button is None:
             return None
-        press = self.COMMAND_PRESS_MAPPING.get(command)
-        if press is None:
-            return None
+        press = self.COMMAND_PRESS_MAPPING.get(command, ButtonPress.SINGLE)
         return (button, press)
 
 
 class IkeaDimmer(Button):
-    def get_press_info(self, command: str, args: Tuple[int, ...]) -> Optional[Tuple[ButtonName, ButtonPress]]:
+    def get_press_info(
+        self, command: str, args: Tuple[int, ...]
+    ) -> Optional[Tuple[ButtonName, ButtonPress]]:
         return {
             ("on", ()): ("top", ButtonPress.SINGLE),
             ("off", ()): ("bottom", ButtonPress.SINGLE),
             ("move_with_on_off", (0, 83)): ("top", ButtonPress.HOLD),
-            ("move", (1, 83)): ("bottom", ButtonPress.HOLD),
+            ("move", (1, 83, 0, 0)): ("bottom", ButtonPress.HOLD),
         }.get((command, args))
 
 
@@ -89,6 +111,7 @@ DEVICE_MAPPING: Dict[str, Button] = {
     "406a8b92e13d77d79941d59e37f03211": IkeaRemote("remote_control"),
     "132631a4a3ccafe42b642066622f70ca": IkeaDimmer("living_room_dimmer"),
     "08a5b2fcc6bab34e04c26f24b04ba75f": IkeaDimmer("bedroom_dimmer"),
+    "62ea957fca278f5760865652190a189a": IkeaRemote("bedroom_remote_control"),
 }
 
 
@@ -96,9 +119,9 @@ class ZhaButtonEvents(hass.Hass):
     def initialize(self):
         self.listen_event(callback=self._on_zha_event, event="zha_event")
 
-    def _on_zha_event(self, _event_name: str, data: Dict[str, Any], _kwargs: Dict[str, Any]):
-        self.log(data)
-
+    def _on_zha_event(
+        self, _event_name: str, data: Dict[str, Any], _kwargs: Dict[str, Any]
+    ):
         device_id = data.get("device_id")
         if device_id is None or not isinstance(device_id, str):
             self.log(f"Unknown device: {device_id}")
@@ -117,10 +140,14 @@ class ZhaButtonEvents(hass.Hass):
             self.log(f"Invalid args: {args}")
             return
 
-        result = device.get_press_info(command, tuple(args))
-        if result is None:
+        button_and_press = device.get_press_info(command, tuple(args))
+        if button_and_press is None:
+            self.log(f"No press info: {data}")
             return None
-        (button, press) = result
+
+        (button, press) = button_and_press
 
         self.log(f"{press} on {device.name} {button}")
-        self.fire_event(EVENT_TYPE, **button_click_to_event_kwargs(device, button, press))
+        self.fire_event(
+            EVENT_TYPE, **button_click_to_event_kwargs(device, button, press)
+        )
