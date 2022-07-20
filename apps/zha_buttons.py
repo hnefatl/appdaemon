@@ -124,16 +124,16 @@ class ZhaButtonEvents(hass.Hass):
     ):
         device_id = data.get("device_id")
         if device_id is None or not isinstance(device_id, str):
-            self.log(f"Unknown device: {device_id}")
+            self.log(f"Invalid device: {device_id}, {args}")
             return
         device = DEVICE_MAPPING.get(device_id)
         if device is None:
-            self.log(f"Unknown device id->device: {device_id}")
+            self.log(f"Unknown device id->device: {device_id}, {args}")
             return
 
         command = data.get("command")
         if command is None or not isinstance(command, str):
-            self.log(f"Invalid command: {command}")
+            self.log(f"Invalid command: {command}, {args}")
             return
         args = data.get("args")
         if args is None or not isinstance(args, list):
