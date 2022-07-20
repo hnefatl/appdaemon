@@ -113,6 +113,7 @@ DEVICE_MAPPING: Dict[str, Button] = {
     "08a5b2fcc6bab34e04c26f24b04ba75f": IkeaDimmer("bedroom_dimmer"),
     "62ea957fca278f5760865652190a189a": IkeaRemote("bedroom_remote_control"),
 }
+IGNORED_DEVICES = {"ea07540a8e0dab2abaab5c804466465a"}
 
 
 class ZhaButtonEvents(hass.Hass):
@@ -126,6 +127,9 @@ class ZhaButtonEvents(hass.Hass):
         if device_id is None or not isinstance(device_id, str):
             self.log(f"Invalid device: {device_id}, {data}")
             return
+        if device_id in IGNORED_DEVICES:
+            return
+
         device = DEVICE_MAPPING.get(device_id)
         if device is None:
             self.log(f"Unknown device id->device: {device_id}, {data}")
