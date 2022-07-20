@@ -67,10 +67,17 @@ class DefaultSceneService(hass.Hass):
     def _get_default_scene_for_room(self, room: Room) -> Optional[str]:
         weekday = datetime.datetime.now().weekday()
         hour = datetime.datetime.now().hour
+        keith_awake: bool = (
+            self.get_state(entity_id="input_boolean.keith_awake") == "on"
+        )
 
         # In the late evening and early morning, default to dim lights in all rooms.
         if between_hours(hour, 0, 3):
             return f"scene.{room.name.lower()}_dim"
+
+        # In the bedroom, if still in "asleep mode" then always do dim.
+        if room is Room.BEDROOM and not keith_awake:
+            return "scene.bedroom_dim"
 
         if room in {Room.BEDROOM, Room.CORRIDOR, Room.ENTRANCE}:
             return f"scene.{room.name.lower()}_bright"
