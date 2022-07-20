@@ -114,6 +114,7 @@ DEVICE_MAPPING: Dict[str, Button] = {
     "62ea957fca278f5760865652190a189a": IkeaRemote("bedroom_remote_control"),
 }
 IGNORED_DEVICES = {"ea07540a8e0dab2abaab5c804466465a"}
+assert not IGNORED_DEVICES.issubset(DEVICE_MAPPING.keys())
 
 
 class ZhaButtonEvents(hass.Hass):
