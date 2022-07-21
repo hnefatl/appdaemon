@@ -72,7 +72,7 @@ class DefaultSceneService(hass.Hass):
         )
 
         # In the late evening and early morning, default to dim lights in all rooms.
-        if between_hours(hour, 0, 3):
+        if between_hours(hour, 0, 6):
             return f"scene.{room.name.lower()}_dim"
 
         # In the bedroom, if still in "asleep mode" then always do dim.
@@ -83,11 +83,11 @@ class DefaultSceneService(hass.Hass):
             return f"scene.{room.name.lower()}_bright"
         elif room is Room.LIVING_ROOM:
             # Bias slightly towards preferred living room lights, with a chance for something different.
-            return get_day_stable_random(
+            return get_day_stable_random_uniform(
                 room.value,
                 {
-                    "scene.living_room_spring_blossom": 2,
-                    "scene.living_room_ibiza": 1,
+                    "scene.living_room_spring_blossom",
+                    "scene.living_room_ibiza",
                 },
             )
         elif room is Room.OFFICE:
@@ -99,9 +99,9 @@ class DefaultSceneService(hass.Hass):
             return get_day_stable_random(
                 room.value,
                 {
-                    "scene.office_savanna_sunset": 2,
-                    "scene.office_tropical_twilight": 1,
-                    "scene.office_soho": 1,
+                    "scene.office_savanna_sunset",
+                    "scene.office_tropical_twilight",
+                    "scene.office_soho",
                 },
             )
         return None
