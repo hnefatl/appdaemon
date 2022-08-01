@@ -96,7 +96,7 @@ class DefaultSceneService(hass.Hass):
             # wakeup/relax calendar events, but due to race conditions and complexity it's an approximation.
             if weekday < 5 and hour < 15 and not keith_ooo:
                 return "scene.office_concentrate"
-            return get_day_stable_random(
+            return get_day_stable_random_uniform(
                 room.value,
                 {
                     "scene.office_savanna_sunset",
