@@ -23,6 +23,8 @@ class Room(enum.Enum):
     OFFICE = enum.auto()
     CORRIDOR = enum.auto()
     ENTRANCE = enum.auto()
+    BATHROOM = enum.auto()
+    KITCHEN = enum.auto()
 
 
 ROOM_NAME_MAPPING = {room.name.lower(): room for room in list(Room)}
@@ -79,10 +81,7 @@ class DefaultSceneService(hass.Hass):
         if room is Room.BEDROOM and not keith_awake:
             return "scene.bedroom_dim"
 
-        if room in {Room.BEDROOM, Room.CORRIDOR, Room.ENTRANCE}:
-            return f"scene.{room.name.lower()}_bright"
-        elif room is Room.LIVING_ROOM:
-            # Bias slightly towards preferred living room lights, with a chance for something different.
+        if room is Room.LIVING_ROOM:
             return get_day_stable_random_uniform(
                 room.value,
                 {
@@ -104,6 +103,8 @@ class DefaultSceneService(hass.Hass):
                     "scene.office_soho",
                 },
             )
+        else:
+            return f"scene.{room.name.lower()}_bright"
         return None
 
     def _turn_on_default_scene(
