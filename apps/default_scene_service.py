@@ -85,8 +85,12 @@ class DefaultSceneService(hass.Hass):
             return get_day_stable_random_uniform(
                 room.value,
                 {
-                    "scene.living_room_spring_blossom",
+                    "scene.living_room_arctic_aurora",
                     "scene.living_room_ibiza",
+                    "scene.living_room_savanna_sunset",
+                    "scene.living_room_soho",
+                    "scene.living_room_spring_blossom",
+                    "scene.living_room_tropical_twilight",
                 },
             )
         elif room is Room.OFFICE:
@@ -98,9 +102,11 @@ class DefaultSceneService(hass.Hass):
             return get_day_stable_random_uniform(
                 room.value,
                 {
+                    "scene.office_arctic_aurora",
                     "scene.office_savanna_sunset",
-                    "scene.office_tropical_twilight",
                     "scene.office_soho",
+                    "scene.office_spring_blossom",
+                    "scene.office_tropical_twilight",
                 },
             )
         else:
