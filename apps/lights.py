@@ -1,7 +1,7 @@
 import dataclasses
 import datetime
 
-from typing import Optional, TypeVar, Callable, Any
+from typing import Optional, Callable, Any
 
 import appdaemon.plugins.hass.hassapi as hass  # type: ignore
 
