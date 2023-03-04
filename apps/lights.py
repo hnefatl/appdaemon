@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import datetime
 
@@ -64,9 +66,7 @@ class ActivitySensor:
 
     @staticmethod
     def isnt_off(entity: str) -> ActivitySensor:
-        return ActivitySensor(
-            entity, lambda s: s != "off", descriptor="isn't off"
-        )
+        return ActivitySensor(entity, lambda s: s != "off", descriptor="isn't off")
 
 
 @dataclasses.dataclass
@@ -147,16 +147,12 @@ class Room:
 
     @callback
     def on_room_motion(self, *_):
-        area_lights_off = (
-            get_state(self.hass, f"group.{self.name}_lights") == "off"
-        )
+        area_lights_off = get_state(self.hass, f"group.{self.name}_lights") == "off"
         # Only load the scene if the lights are off: if the lights are already
         # on, leave them as they are.
         if area_lights_off:
             self.hass.log(f"motion in {self.name}, loading default scene")
-            self.hass.fire_event(
-                event="default_scene_turn_on", rooms=[self.name]
-            )
+            self.hass.fire_event(event="default_scene_turn_on", rooms=[self.name])
         else:
             self.hass.log(f"motion in {self.name} but lights already on")
 
@@ -179,9 +175,7 @@ class Room:
         if not active_devices:
             room_occupied = get_state(self.hass, self.motion_sensor) == "on"
             if not room_occupied:
-                self.hass.log(
-                    f"no active devices, last was {entity}, lights off"
-                )
+                self.hass.log(f"no active devices, last was {entity}, lights off")
                 self._turn_off_lights()
             else:
                 self.hass.log(
@@ -204,25 +198,19 @@ class Lights(hass.Hass):
                 hass=self,
                 name="living_room",
                 no_motion_timeout=to_seconds(minutes=15),
-                activity_sensors=[
-                    ActivitySensor.isnt_off("media_player.shield")
-                ],
+                activity_sensors=[ActivitySensor.isnt_off("media_player.shield")],
             ),
             Room.make_room(
                 hass=self,
                 name="bathroom",
                 no_motion_timeout=to_seconds(minutes=2),
-                activity_sensors=[
-                    ActivitySensor.is_on("input_boolean.shower_active")
-                ],
+                activity_sensors=[ActivitySensor.is_on("input_boolean.shower_active")],
             ),
             Room.make_room(
                 hass=self,
                 name="bedroom",
                 no_motion_timeout=to_seconds(minutes=1),
-                lights_only_if=[
-                    ActivitySensor.is_on("input_boolean.keith_awake")
-                ],
+                lights_only_if=[ActivitySensor.is_on("input_boolean.keith_awake")],
                 has_manual_control_toggle=True,
             ),
             Room.make_room(
