@@ -197,15 +197,13 @@ class Lights(hass.Hass):
             Room.make_room(
                 hass=self,
                 name="office",
-                # no_motion_timeout=to_seconds(hours=1),
-                no_motion_timeout=to_seconds(seconds=1),
+                no_motion_timeout=to_seconds(hours=1),
                 activity_sensors=[ActivitySensor.is_on("switch.pc")],
             ),
             Room.make_room(
                 hass=self,
                 name="living_room",
-                # no_motion_timeout=to_seconds(minutes=15),
-                no_motion_timeout=to_seconds(seconds=2),
+                no_motion_timeout=to_seconds(minutes=15),
                 activity_sensors=[
                     ActivitySensor.isnt_off("media_player.shield")
                 ],
@@ -221,8 +219,7 @@ class Lights(hass.Hass):
             Room.make_room(
                 hass=self,
                 name="bedroom",
-                # no_motion_timeout=to_seconds(minutes=1),
-                no_motion_timeout=to_seconds(seconds=1),
+                no_motion_timeout=to_seconds(minutes=1),
                 lights_only_if=[
                     ActivitySensor.is_on("input_boolean.keith_awake")
                 ],
