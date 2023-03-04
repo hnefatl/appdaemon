@@ -6,6 +6,10 @@ default_scene_service:
   module: default_scene_service
   class: DefaultSceneService
 
+lights:
+  module: lights
+  class: Lights
+
 buttons:
   module: buttons
   class: Buttons
