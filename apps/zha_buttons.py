@@ -7,6 +7,8 @@ import appdaemon.plugins.hass.hassapi as hass  # type: ignore
 
 EVENT_TYPE = "zha_button_press"
 
+# Whether to spam the logs about unknown devices: useful when adding a new device, annoying otherwise.
+_LOG_UNKNOWN_DEVICES = False
 
 ButtonName = str
 
@@ -51,11 +53,7 @@ def button_click_from_event_kwargs(
         None,
     )
     device = next(
-        (
-            device
-            for device in DEVICE_MAPPING.values()
-            if device.name == device_name
-        ),
+        (device for device in DEVICE_MAPPING.values() if device.name == device_name),
         None,
     )
     if press is None or device is None:
@@ -132,7 +130,7 @@ class ZhaButtonEvents(hass.Hass):
             return
 
         device = DEVICE_MAPPING.get(device_id)
-        if device is None:
+        if device is None and _LOG_UNKNOWN_DEVICES:
             self.log(f"Unknown device id->device: {device_id}, {data}")
             return
 

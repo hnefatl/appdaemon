@@ -37,13 +37,9 @@ class Buttons(hass.Hass):
         self._manual_mode_scene_iterator = 0
 
     def initialize(self):
-        self.listen_event(
-            event=zha_buttons.EVENT_TYPE, callback=self._button_press
-        )
+        self.listen_event(event=zha_buttons.EVENT_TYPE, callback=self._button_press)
 
-    def _button_press(
-        self, _event_name: str, data: Dict[str, Any], _kwargs: Any
-    ):
+    def _button_press(self, _event_name: str, data: Dict[str, Any], _kwargs: Any):
         info = zha_buttons.button_click_from_event_kwargs(data)
         self.log(info)
         if info is None:
@@ -64,13 +60,9 @@ class Buttons(hass.Hass):
         press: zha_buttons.ButtonPress,
     ):
         if button == "right":
-            self.call_service(
-                service="switch/toggle", entity_id="switch.table_light"
-            )
+            self.call_service(service="switch/toggle", entity_id="switch.table_light")
         elif button == "left":
-            self.call_service(
-                service="switch/toggle", entity_id="switch.daisy_chain"
-            )
+            self.call_service(service="switch/toggle", entity_id="switch.daisy_chain")
         elif button == "bottom":
             self.call_service(service="light/turn_off", area_id="living_room")
         else:
@@ -91,9 +83,7 @@ class Buttons(hass.Hass):
         room = room_match[1]
         self.log(room)
         if button == "top":
-            self.fire_event(
-                event=default_scene_service.EVENT_NAME, rooms=[room]
-            )
+            self.fire_event(event=default_scene_service.EVENT_NAME, rooms=[room])
         else:
             self.call_service(service="light/turn_off", area_id=room)
 
@@ -103,9 +93,7 @@ class Buttons(hass.Hass):
         button: str,
         press: zha_buttons.ButtonPress,
     ):
-        bedroom_manual_control = self.get_entity(
-            "input_boolean.bedroom_manual_control"
-        )
+        bedroom_manual_control = self.get_entity("input_boolean.bedroom_manual_control")
         is_manual_control = bedroom_manual_control.get_state() == "on"
         if press == zha_buttons.ButtonPress.HOLD:
             if button == "top":
