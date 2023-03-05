@@ -9,7 +9,7 @@ import appdaemon.plugins.hass.hassapi as hass  # type: ignore
 
 
 # Whether to print "verbose" log lines, intended to be debug logs for logic that doesn't cause state to change.
-_VERBOSE_LOG = False
+_VERBOSE_LOG = True
 
 
 def callback(
@@ -67,6 +67,12 @@ class ActivitySensor:
     @staticmethod
     def isnt_off(entity: str) -> ActivitySensor:
         return ActivitySensor(entity, lambda s: s != "off", descriptor="isn't off")
+
+    @staticmethod
+    def is_below(entity: str, threshold: float) -> ActivitySensor:
+        return ActivitySensor(
+            entity, lambda s: float(s) < threshold, descriptor=f"< {threshold}"
+        )
 
 
 @dataclasses.dataclass
@@ -140,6 +146,11 @@ class Room:
             if activity_sensor.is_active(self.hass)
         ]
 
+    def _get_inactive_required_sensors(self) -> list[ActivitySensor]:
+        return [
+            sensor for sensor in self.lights_only_if if not sensor.is_active(self.hass)
+        ]
+
     def manual_control_enabled(self) -> bool:
         if self.manual_control_input_boolean is None:
             return False
@@ -154,6 +165,12 @@ class Room:
 
     @callback
     def on_room_motion(self, *_):
+        inactive_required_sensors = self._get_inactive_required_sensors()
+        if inactive_required_sensors:
+            self._verbose_log(
+                f"motion in {self.name} but required sensors aren't active: {inactive_required_sensors}"
+            )
+            return
         area_lights_off = get_state(self.hass, f"group.{self.name}_lights") == "off"
         # Only load the scene if the lights are off: if the lights are already
         # on, leave them as they are.
@@ -167,7 +184,9 @@ class Room:
     def on_room_no_motion(self, *_):
         active_devices = self._get_active_sensors()
         if not active_devices:
-            self._log(f"no motion in {self.name} for {self.no_motion_timeout}, no devices are active, lights off")
+            self._log(
+                f"no motion in {self.name} for {self.no_motion_timeout}, no devices are active, lights off"
+            )
             self._turn_off_lights()
         else:
             self._verbose_log(
@@ -222,6 +241,9 @@ class Lights(hass.Hass):
                 hass=self,
                 name="corridor",
                 no_motion_timeout=datetime.timedelta(minutes=2, seconds=30),
+                lights_only_if=[
+                    ActivitySensor.is_below("sensor.corridor_motion_illuminance", 35)
+                ],
             ),
             Room.make_room(
                 hass=self,
