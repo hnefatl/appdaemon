@@ -130,8 +130,9 @@ class ZhaButtonEvents(hass.Hass):
             return
 
         device = DEVICE_MAPPING.get(device_id)
-        if device is None and _LOG_UNKNOWN_DEVICES:
-            self.log(f"Unknown device id->device: {device_id}, {data}")
+        if device is None:
+            if _LOG_UNKNOWN_DEVICES:
+                self.log(f"Unknown device id->device: {device_id}, {data}")
             return
 
         command = data.get("command")
