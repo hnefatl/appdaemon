@@ -8,6 +8,10 @@ from typing import Optional, Callable, Any
 import appdaemon.plugins.hass.hassapi as hass  # type: ignore
 
 
+# Whether to print "verbose" log lines, intended to be debug logs for logic that doesn't cause state to change.
+_VERBOSE_LOG = False
+
+
 def callback(
     f: Callable[[Room, str, str, str, str, Any], None]
 ) -> Callable[[Room, str, str, str, str, Any], None]:
@@ -145,27 +149,32 @@ class Room:
             return False
         return get_state(self.hass, self.manual_control_input_boolean) == "on"
 
+    def _log(self, msg: str):
+        self.hass.log(msg)
+
+    def _verbose_log(self, msg: str):
+        if _VERBOSE_LOG:
+            self.hass.log(msg)
+
     @callback
     def on_room_motion(self, *_):
         area_lights_off = get_state(self.hass, f"group.{self.name}_lights") == "off"
         # Only load the scene if the lights are off: if the lights are already
         # on, leave them as they are.
         if area_lights_off:
-            self.hass.log(f"motion in {self.name}, loading default scene")
+            self._log(f"motion in {self.name}, loading default scene")
             self.hass.fire_event(event="default_scene_turn_on", rooms=[self.name])
         else:
-            self.hass.log(f"motion in {self.name} but lights already on")
+            self._verbose_log(f"motion in {self.name} but lights already on")
 
     @callback
     def on_room_no_motion(self, *_):
         active_devices = self._get_active_sensors()
         if not active_devices:
-            self.hass.log(
-                f"no motion in {self.name}, no devices are active, lights off"
-            )
+            self._log(f"no motion in {self.name}, no devices are active, lights off")
             self._turn_off_lights()
         else:
-            self.hass.log(
+            self._verbose_log(
                 f"no motion in {self.name}, but devices are active: {active_devices}"
             )
 
@@ -175,14 +184,14 @@ class Room:
         if not active_devices:
             room_occupied = get_state(self.hass, self.motion_sensor) == "on"
             if not room_occupied:
-                self.hass.log(f"no active devices, last was {entity}, lights off")
+                self._log(f"no active devices, last was {entity}, lights off")
                 self._turn_off_lights()
             else:
-                self.hass.log(
+                self._verbose_log(
                     f"no active devices, last was {entity}, but room occupied"
                 )
         else:
-            self.hass.log(f"active devices remaining: {active_devices}")
+            self._log(f"active devices remaining: {active_devices}")
 
 
 class Lights(hass.Hass):
