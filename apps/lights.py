@@ -222,7 +222,10 @@ class Lights(hass.Hass):
                 hass=self,
                 name="living_room",
                 no_motion_timeout=datetime.timedelta(minutes=15),
-                activity_sensors=[ActivitySensor.isnt_off("media_player.shield")],
+                activity_sensors=[
+                    ActivitySensor.isnt_off("media_player.shield"),
+                    ActivitySensor.isnt_off("media_player.living_room_speaker"),
+                ],
             ),
             Room.make_room(
                 hass=self,
