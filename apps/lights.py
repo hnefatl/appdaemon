@@ -33,10 +33,6 @@ def callback(
     return wrapper
 
 
-def to_seconds(**kwargs) -> int:
-    return datetime.timedelta(**kwargs).seconds
-
-
 def get_state(hass: hass.Hass, entity_id: str) -> str:
     state = hass.get_state(entity_id=entity_id)
     # hass.log(f"entity {entity_id}, state {state}")
@@ -82,7 +78,7 @@ class Room:
     # Entity indicating motion within the room.
     motion_sensor: str
     # How long to wait after no motion before turning off the lights.
-    no_motion_timeout: int
+    no_motion_timeout: datetime.timedelta
     # Don't turn out the lights if any of these entities are on.
     activity_sensors: list[ActivitySensor]
     # Don't turn on the lights if any of these entities are on.
@@ -94,7 +90,7 @@ class Room:
     def make_room(
         hass: hass.Hass,
         name: str,
-        no_motion_timeout: int,
+        no_motion_timeout: datetime.timedelta,
         activity_sensors: Optional[list[ActivitySensor]] = None,
         lights_only_if: Optional[list[ActivitySensor]] = None,
         has_manual_control_toggle: bool = False,
@@ -121,7 +117,7 @@ class Room:
             callback=self.on_room_no_motion,
             entity_id=self.motion_sensor,
             new="off",
-            duration=self.no_motion_timeout,
+            duration=self.no_motion_timeout.seconds,
         )
         # In addition to listening to just motion, also listen for when the
         # devices indicating activity in the room change, otherwise we might
@@ -137,7 +133,7 @@ class Room:
             service="light/turn_off", transition=5, area_id=self.name
         )
 
-    def _get_active_sensors(self):
+    def _get_active_sensors(self) -> list[ActivitySensor]:
         return [
             activity_sensor
             for activity_sensor in self.activity_sensors
@@ -171,7 +167,7 @@ class Room:
     def on_room_no_motion(self, *_):
         active_devices = self._get_active_sensors()
         if not active_devices:
-            self._log(f"no motion in {self.name}, no devices are active, lights off")
+            self._log(f"no motion in {self.name} for {self.no_motion_timeout}, no devices are active, lights off")
             self._turn_off_lights()
         else:
             self._verbose_log(
@@ -200,42 +196,42 @@ class Lights(hass.Hass):
             Room.make_room(
                 hass=self,
                 name="office",
-                no_motion_timeout=to_seconds(hours=1),
+                no_motion_timeout=datetime.timedelta(hours=1),
                 activity_sensors=[ActivitySensor.is_on("switch.pc")],
             ),
             Room.make_room(
                 hass=self,
                 name="living_room",
-                no_motion_timeout=to_seconds(minutes=15),
+                no_motion_timeout=datetime.timedelta(minutes=15),
                 activity_sensors=[ActivitySensor.isnt_off("media_player.shield")],
             ),
             Room.make_room(
                 hass=self,
                 name="bathroom",
-                no_motion_timeout=to_seconds(minutes=2),
+                no_motion_timeout=datetime.timedelta(minutes=2),
                 activity_sensors=[ActivitySensor.is_on("input_boolean.shower_active")],
             ),
             Room.make_room(
                 hass=self,
                 name="bedroom",
-                no_motion_timeout=to_seconds(minutes=1),
+                no_motion_timeout=datetime.timedelta(minutes=1),
                 lights_only_if=[ActivitySensor.is_on("input_boolean.keith_awake")],
                 has_manual_control_toggle=True,
             ),
             Room.make_room(
                 hass=self,
                 name="corridor",
-                no_motion_timeout=to_seconds(minutes=2, seconds=30),
+                no_motion_timeout=datetime.timedelta(minutes=2, seconds=30),
             ),
             Room.make_room(
                 hass=self,
                 name="entrance",
-                no_motion_timeout=to_seconds(minutes=5),
+                no_motion_timeout=datetime.timedelta(minutes=5),
             ),
             Room.make_room(
                 hass=self,
                 name="kitchen",
-                no_motion_timeout=to_seconds(minutes=5),
+                no_motion_timeout=datetime.timedelta(minutes=5),
             ),
         ]
 
