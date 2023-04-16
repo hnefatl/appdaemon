@@ -91,6 +91,9 @@ class Room:
     lights_only_if: list[ActivitySensor]
     # input_boolean for toggling automatic/manual control.
     manual_control_input_boolean: Optional[str]
+    # The last time there was motion in the room. Homeassistant "are lights on"
+    # queries can have a bit of lag due to e.g. light transitions.
+    last_motion: datetime.datetime
 
     @staticmethod
     def make_room(
@@ -113,6 +116,7 @@ class Room:
                 if has_manual_control_toggle
                 else None
             ),
+            last_motion=datetime.datetime.min,
         )
 
     def initialise(self, hass: hass.Hass):
@@ -165,6 +169,8 @@ class Room:
 
     @callback
     def on_room_motion(self, *_):
+        self.last_motion = datetime.datetime.now()
+
         inactive_required_sensors = self._get_inactive_required_sensors()
         if inactive_required_sensors:
             self._verbose_log(
@@ -196,17 +202,26 @@ class Room:
     @callback
     def on_activity_sensor_change(self, entity: str, *_):
         active_devices = self._get_active_sensors()
-        if not active_devices:
-            room_occupied = get_state(self.hass, self.motion_sensor) == "on"
-            if not room_occupied:
-                self._log(f"no active devices, last was {entity}, lights off")
-                self._turn_off_lights()
-            else:
-                self._verbose_log(
-                    f"no active devices, last was {entity}, but room occupied"
-                )
-        else:
+        if active_devices:
             self._log(f"active devices remaining: {active_devices}")
+            return
+
+        # Don't turn the lights off if a device is turned off and there hasn't
+        # been motion recently: wait for the full timeout.
+        time_since_last_motion = datetime.datetime.now() - self.last_motion
+        if time_since_last_motion > self.no_motion_timeout:
+            self._log(
+                f"no active devices, last was {entity}, last motion was "
+                f"{time_since_last_motion.seconds} ago vs timeout of "
+                f"{self.no_motion_timeout.seconds}, lights off"
+            )
+            self._turn_off_lights()
+        else:
+            self._verbose_log(
+                f"no active devices, last was {entity}, last motion was "
+                f"{time_since_last_motion.seconds} ago vs timeout of "
+                f"{self.no_motion_timeout.seconds}, so room occupied"
+            )
 
 
 class Lights(hass.Hass):
