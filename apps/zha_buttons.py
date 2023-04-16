@@ -8,7 +8,7 @@ import appdaemon.plugins.hass.hassapi as hass  # type: ignore
 EVENT_TYPE = "zha_button_press"
 
 # Whether to spam the logs about unknown devices: useful when adding a new device, annoying otherwise.
-_LOG_UNKNOWN_DEVICES = False
+_LOG_UNKNOWN_DEVICES = True
 
 ButtonName = str
 
@@ -23,15 +23,11 @@ class Button(abc.ABC):
         self.name = name
 
     @abc.abstractmethod
-    def get_press_info(
-        self, command: str, args: Tuple[int, ...]
-    ) -> Optional[Tuple[ButtonName, ButtonPress]]:
+    def get_press_info(self, command: str, args: Tuple[int, ...]) -> Optional[Tuple[ButtonName, ButtonPress]]:
         pass
 
 
-def button_click_to_event_kwargs(
-    device: Button, button: ButtonName, press: ButtonPress
-) -> Optional[Dict[str, str]]:
+def button_click_to_event_kwargs(device: Button, button: ButtonName, press: ButtonPress) -> Optional[Dict[str, str]]:
     return {
         "device": device.name,
         "button": button,
@@ -39,9 +35,7 @@ def button_click_to_event_kwargs(
     }
 
 
-def button_click_from_event_kwargs(
-    kwargs: Dict[str, str]
-) -> Optional[Tuple[Button, ButtonName, ButtonPress]]:
+def button_click_from_event_kwargs(kwargs: Dict[str, str]) -> Optional[Tuple[Button, ButtonName, ButtonPress]]:
     device_name = kwargs.get("device")
     button = kwargs.get("button")
     press_name = kwargs.get("press")
@@ -83,9 +77,7 @@ class IkeaRemote(Button):
         "hold": ButtonPress.HOLD,  # left and right buttons
     }
 
-    def get_press_info(
-        self, command: str, args: Tuple[int, ...]
-    ) -> Optional[Tuple[ButtonName, ButtonPress]]:
+    def get_press_info(self, command: str, args: Tuple[int, ...]) -> Optional[Tuple[ButtonName, ButtonPress]]:
         button = self.ARGS_BUTTON_MAPPING.get(tuple(args))
         if button is None:
             return None
@@ -94,9 +86,7 @@ class IkeaRemote(Button):
 
 
 class IkeaDimmer(Button):
-    def get_press_info(
-        self, command: str, args: Tuple[int, ...]
-    ) -> Optional[Tuple[ButtonName, ButtonPress]]:
+    def get_press_info(self, command: str, args: Tuple[int, ...]) -> Optional[Tuple[ButtonName, ButtonPress]]:
         return {
             ("on", ()): ("top", ButtonPress.SINGLE),
             ("off", ()): ("bottom", ButtonPress.SINGLE),
@@ -110,8 +100,12 @@ DEVICE_MAPPING: Dict[str, Button] = {
     # "132631a4a3ccafe42b642066622f70ca": IkeaDimmer("living_room_dimmer"),
     "08a5b2fcc6bab34e04c26f24b04ba75f": IkeaDimmer("bedroom_dimmer"),
     "62ea957fca278f5760865652190a189a": IkeaRemote("bedroom_remote_control"),
+    "0ebd6b19c3d0d9f18449f77f309de489": IkeaDimmer("extractor_fan_switch"),
 }
-IGNORED_DEVICES = {"ea07540a8e0dab2abaab5c804466465a"}
+IGNORED_DEVICES = {
+    "ea07540a8e0dab2abaab5c804466465a",
+    "5c119d7b55afad3a699dc4d8217f989a",
+}
 assert not IGNORED_DEVICES.issubset(DEVICE_MAPPING.keys())
 
 
@@ -119,9 +113,7 @@ class ZhaButtonEvents(hass.Hass):
     def initialize(self):
         self.listen_event(callback=self._on_zha_event, event="zha_event")
 
-    def _on_zha_event(
-        self, _event_name: str, data: Dict[str, Any], _kwargs: Dict[str, Any]
-    ):
+    def _on_zha_event(self, _event_name: str, data: Dict[str, Any], _kwargs: Dict[str, Any]):
         device_id = data.get("device_id")
         if device_id is None or not isinstance(device_id, str):
             self.log(f"Invalid device: {device_id}, {data}")
@@ -152,6 +144,4 @@ class ZhaButtonEvents(hass.Hass):
         (button, press) = button_and_press
 
         self.log(f"{press} on {device.name} {button}")
-        self.fire_event(
-            EVENT_TYPE, **button_click_to_event_kwargs(device, button, press)
-        )
+        self.fire_event(EVENT_TYPE, **button_click_to_event_kwargs(device, button, press))
