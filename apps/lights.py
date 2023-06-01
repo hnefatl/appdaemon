@@ -257,6 +257,7 @@ class Lights(hass.Hass):
                 name="corridor",
                 no_motion_timeout=datetime.timedelta(minutes=2, seconds=30),
                 lights_only_if=[ActivitySensor.is_below("sensor.corridor_motion_illuminance", 35)],
+                has_manual_control_toggle=True,
             ),
             Room.make_room(
                 hass=self,
