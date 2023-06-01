@@ -106,6 +106,7 @@ IGNORED_DEVICES = {
     "ea07540a8e0dab2abaab5c804466465a",
     "5c119d7b55afad3a699dc4d8217f989a",
     "963b3789094aa7bde785c74e146b060d",
+    "7e6a3bfe790bd210b5ba861198846305",
 }
 assert not IGNORED_DEVICES.issubset(DEVICE_MAPPING.keys())
 
