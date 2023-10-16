@@ -78,9 +78,6 @@ class DefaultSceneService(hass.Hass):
             return "scene.bedroom_dim"
 
         if room is Room.LIVING_ROOM:
-            rosie_visiting = self.get_state(entity_id="person.rosie") == "home"
-            if rosie_visiting and weekday < 5 and hour < 17:
-                return "scene.living_room_concentrate"
             return get_day_stable_random_uniform(
                 room.value,
                 {
