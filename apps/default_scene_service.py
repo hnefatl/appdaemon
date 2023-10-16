@@ -62,6 +62,7 @@ class DefaultSceneService(hass.Hass):
         weekday = datetime.datetime.now().weekday()
         hour = datetime.datetime.now().hour
         keith_awake: bool = self.get_state(entity_id="input_boolean.keith_awake") == "on"
+        nighttime_lights_enabled: bool = self.get_state(entity_id="input_boolean.nighttime_lights_enabled") == "on"
 
         # Special-case lighting for the corridor when the 3d-printer is active,
         # so I can check up on it more easily.
@@ -69,7 +70,7 @@ class DefaultSceneService(hass.Hass):
             return f"scene.{room.name.lower()}_bright"
 
         # In the late evening and early morning, default to dim lights in all rooms.
-        if between_hours(hour, 0, 6):
+        if nighttime_lights_enabled and between_hours(hour, 0, 6):
             return f"scene.{room.name.lower()}_dim"
 
         # In the bedroom, if still in "asleep mode" then always do dim.
