@@ -58,15 +58,10 @@ class CaramellDansen(hass.Hass):
 
         self._effect_active = True
         # Run the loop until indicated not to
-        start = datetime.datetime.now()
         for hue in itertools.cycle(COLOUR_ORDER):
             if not self._effect_active:
                 break
 
             # Set 0 transition time for a snappy flick between colours.
-            # TODO: Create a connection manually using bridge parameters, to reduce latency.
             bridge.set_group(group_id, "hue", hue, transitiontime=0)
-            new_time = datetime.datetime.now()
-            print(f"Call took {(new_time - start).total_seconds()}s")
-            start = new_time
             await asyncio.sleep(SPEED)
