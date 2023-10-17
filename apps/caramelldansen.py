@@ -28,9 +28,6 @@ class CaramellDansen(hass.Hass):
         self._bridge_ip = self.args.get("bridge_ip")
 
     def initialize(self):
-        # Print group names for debugging
-        print(f"All Hue groups: {[g.name for g in self.connect().groups]}")
-
         # Turn off any active effects, reset input.
         self.set_state(entity_id=ROOM_SELECTOR_ENTITY_ID, state="")
 
