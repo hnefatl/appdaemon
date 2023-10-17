@@ -30,7 +30,7 @@ class Room(enum.Enum):
 ROOM_NAME_MAPPING = {room.name.lower(): room for room in list(Room)}
 
 
-def get_day_stable_random(seed: int, values: Dict[T, int]) -> T:
+def get_day_stable_random(seed: int, values: dict[T, int]) -> T:
     """Get a random value which is stable throughout a given day for the same given seed."""
     # Get the timestamp for the start of "today"
     today_seed = int((datetime.datetime.combine(datetime.date.today(), datetime.datetime.min.time())).timestamp())
@@ -44,7 +44,7 @@ def get_day_stable_random(seed: int, values: Dict[T, int]) -> T:
     return choices[0]
 
 
-def get_day_stable_random_uniform(seed: int, values: Set[T]) -> T:
+def get_day_stable_random_uniform(seed: int, values: set[T]) -> T:
     return get_day_stable_random(seed, {x: 1 for x in values})
 
 
@@ -52,21 +52,22 @@ def get_day_stable_random_uniform(seed: int, values: Set[T]) -> T:
 # https://community.home-assistant.io/t/ad-and-register-service-but-getting-service-not-found/185258/8 to listen for an
 # event and treat it as a service call.
 class DefaultSceneService(hass.Hass):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def initialize(self):
         self.listen_event(event=EVENT_NAME, callback=self._turn_on_default_scene)
 
+    def _get_boolean_state(self, entity_id: str) -> bool:
+        return self.get_state(entity_id=entity_id) == "on"
+
     def _get_default_scene_for_room(self, room: Room) -> Optional[str]:
         weekday = datetime.datetime.now().weekday()
         hour = datetime.datetime.now().hour
-        keith_awake: bool = self.get_state(entity_id="input_boolean.keith_awake") == "on"
-        nighttime_lights_enabled: bool = self.get_state(entity_id="input_boolean.nighttime_lights_enabled") == "on"
+        keith_awake = self._get_boolean_state("input_boolean.keith_awake")
+        nighttime_lights_enabled = self._get_boolean_state("input_boolean.nighttime_lights_enabled")
 
         # Special-case lighting for the corridor when the 3d-printer is active,
         # so I can check up on it more easily.
-        if room is Room.CORRIDOR and self.get_state(entity_id="binary_sensor.octoprint_printing") == "on":
+        if room is Room.CORRIDOR and self._get_boolean_state("binary_sensor.octoprint_printing"):
             return f"scene.{room.name.lower()}_bright"
 
         # In the late evening and early morning, default to dim lights in all rooms.
@@ -90,7 +91,7 @@ class DefaultSceneService(hass.Hass):
                 },
             )
         elif room is Room.OFFICE:
-            keith_ooo = self.get_state(entity_id="binary_sensor.keith_ooo") == "on"
+            keith_ooo = self._get_boolean_state("binary_sensor.keith_ooo")
             # If it's mon-fri before 3pm, default to work lighting. This isn't a perfect match for e.g. OOO, or
             # wakeup/relax calendar events, but due to race conditions and complexity it's an approximation.
             if weekday < 5 and hour < 15 and not keith_ooo:
