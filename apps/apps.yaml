@@ -21,3 +21,8 @@ pager:
   password: !secret pager_email_password
   email_to: !secret pager_email_to
   emails_from: !secret pager_emails_from
+
+caramelldansen:
+  module: caramelldansen
+  class: CaramellDansen
+  bridge_ip: !secret hue_bridge_ip
