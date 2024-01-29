@@ -278,7 +278,7 @@ class Lights(hass.Hass):
             Room.make_room(
                 hass=self,
                 name="office",
-                no_motion_timeout=datetime.timedelta(hours=1),
+                no_motion_timeout=datetime.timedelta(minutes=30),
                 activity_sensors=[ActivitySensor.is_on(EntityId("switch.pc"))],
             ),
             Room.make_room(
@@ -291,6 +291,7 @@ class Lights(hass.Hass):
                 },
                 activity_sensors=[
                     ActivitySensor.isnt_off(EntityId("media_player.shield")),
+                    ActivitySensor.isnt_off(EntityId("binary_sensor.ping_nintendo_switch")),
                     ActivitySensor.isnt_off(EntityId("media_player.living_room_speaker")),
                 ],
             ),
