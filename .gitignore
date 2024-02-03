@@ -4,6 +4,8 @@ compiled/
 .appdaemon.yaml*
 *~
 
+secrets.yaml
+
 # Maybe these should be included, not sure yet since not used.
 dashboards/
 namespaces/

@@ -1,5 +1,4 @@
 ---
-secrets: /homeassistant/secrets.yaml
 appdaemon:
   latitude: 52.379189
   longitude: 4.899431
@@ -8,6 +7,8 @@ appdaemon:
   plugins:
     HASS:
       type: hass
+      ha_url: http://10.20.1.3:8123
+      token: !secret hass_appdaemon_token
   exclude_dirs:
     - .git
 http:
