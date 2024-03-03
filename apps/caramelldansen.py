@@ -1,4 +1,5 @@
 """Based on https://github.com/milesflo/caramelldansen-philips."""
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 
 from __future__ import annotations
 import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
@@ -6,7 +7,9 @@ import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTyp
 import asyncio
 import itertools
 
-from phue import Bridge, Group, PhueRegistrationException
+from typing import Any
+
+from phue import Bridge, Group, PhueRegistrationException # pyright: ignore[reportMissingTypeStubs]
 
 
 ROOM_SELECTOR_ENTITY_ID = "input_select.caramell_dansen_room"
@@ -20,10 +23,10 @@ COLOUR_ORDER = [YELLOW, RED, CYAN, PURPLE]
 
 
 class CaramellDansen(hass.Hass):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: ..., **kwargs: ...):
         super().__init__(*args, **kwargs)
         self._effect_active = False
-        self._bridge_ip = self.args.get("bridge_ip")
+        self._bridge_ip: str = self.args.get("bridge_ip")
 
     def initialize(self):
         # Turn off any active effects, reset input.
@@ -42,7 +45,7 @@ class CaramellDansen(hass.Hass):
                 "Registration failed, press the button on the Bridge and retry."
             )
 
-    async def room_selection_changed(self, _entity, _attribute, _old, new, _kwargs):
+    async def room_selection_changed(self, _entity: str , _attribute: str, _old: ..., new: ..., _kwargs: ...):
         group_name = new
         if not group_name:
             # Room deselected, stop the effect.
@@ -54,16 +57,14 @@ class CaramellDansen(hass.Hass):
         bridge = self.connect()
 
         if use_group_api:
-            update_lights = lambda params: bridge.set_group(
-                group_name, params, transitiontime=0
-            )
+            def update_lights(params: dict[str, Any]):
+              bridge.set_group(group_name, params, transitiontime=0)
         else:
             group = Group(bridge, group_name)
             light_ids = [light.light_id for light in group.lights]
 
-            update_lights = lambda params: bridge.set_light(
-                light_ids, params, transitiontime=0
-            )
+            def update_lights(params: dict[str, Any]):
+                bridge.set_light(light_ids, params, transitiontime=0)
 
         # Initialise the lights
         initial_params = {"on": True, "bri": 255}

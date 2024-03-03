@@ -1,3 +1,5 @@
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
+
 import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
 import asyncio
 import enum
@@ -15,7 +17,7 @@ class State(enum.Enum):
 
 
 class Schedule(hass.Hass):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: ..., **kwargs: ...):
         super().__init__(*args, **kwargs)
 
         self._state = State.SUN_DOWN
@@ -50,7 +52,7 @@ class Schedule(hass.Hass):
             callback=self.on_calendar_event,
         )
 
-    async def on_sun_change(self, kwargs):
+    async def on_sun_change(self, **kwargs: ...):
         new_state = kwargs.get("state")
         self.log(f"Sun state changed: {new_state}")
         async with self._state_lock:

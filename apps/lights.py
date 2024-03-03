@@ -1,3 +1,4 @@
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 from __future__ import annotations
 
 import dataclasses

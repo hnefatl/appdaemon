@@ -1,3 +1,5 @@
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
+
 from __future__ import annotations
 import abc
 import enum
@@ -27,7 +29,7 @@ class Button(abc.ABC):
         pass
 
 
-def button_click_to_event_kwargs(device: Button, button: ButtonName, press: ButtonPress) -> Optional[Dict[str, str]]:
+def button_click_to_event_kwargs(device: Button, button: ButtonName, press: ButtonPress) -> dict[str, str]:
     return {
         "device": device.name,
         "button": button,

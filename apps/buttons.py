@@ -1,4 +1,5 @@
 """Handle simple button presses to remove duplication in HA automations."""
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 
 import re
 from typing import Any, Dict
@@ -31,7 +32,7 @@ _MANUAL_MODE_SCENES = [
 
 
 class Buttons(hass.Hass):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: ..., **kwargs: ...):
         super().__init__(*args, **kwargs)
         self._manual_mode_scene_iterator = 0
 
@@ -40,10 +41,10 @@ class Buttons(hass.Hass):
 
     def _button_press(self, _event_name: str, data: Dict[str, Any], _kwargs: Any):
         info = zha_buttons.button_click_from_event_kwargs(data)
-        self.log(info)
+        self.log(str(info))
         if info is None:
             return
-        (device, button, press) = info
+        (device, _button, _press) = info
 
         if device.name == "remote_control":
             self._remote_control_logic(*info)

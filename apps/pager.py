@@ -1,6 +1,10 @@
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
+
 import functools
 import imapclient # pyright: ignore[reportMissingTypeStubs]
 import time
+
+from typing import cast
 
 import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
 
@@ -14,15 +18,15 @@ PROCESSED_KEYWORD = "pager_processed"
 
 
 class Pager(hass.Hass):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: ..., **kwargs: ...):
         super().__init__(*args, **kwargs)
-        self._connection = None
+        self._connection: None | imapclient.IMAPClient = None
         self._main_loop_future = None
 
-        self._username = self.args.get("username")
-        self._password = self.args.get("password")
-        self._to_email = self.args.get("email_to")
-        self._from_emails = self.args.get("emails_from")
+        self._username = cast(str, self.args.get("username"))
+        self._password = cast(str, self.args.get("password"))
+        self._to_email = cast(str, self.args.get("email_to"))
+        self._from_emails = cast(list[str], self.args.get("emails_from"))
 
         # Create a string like 'OR (FROM a) (OR (FROM b) (FROM c))' (parentheses
         # for emphasis only) to filter against multiple sender emails.
@@ -69,7 +73,8 @@ class Pager(hass.Hass):
 
     def _disconnect(self):
         try:
-            self._connection.logout()
+            if self._connection is not None:
+                self._connection.logout()
         except Exception as e:
             # Drop all errors. Maybe not neat, but ensures we keep running.
             self.log(f"Ignoring disconnect error during terminate: {e}")
@@ -115,7 +120,7 @@ class Pager(hass.Hass):
             f"Starting scene loads: keith_awake={keith_awake}, bedroom_light_on={bedroom_light_on}"
         )
 
-        for i in range(LIGHT_FLASH_COUNT):
+        for _ in range(LIGHT_FLASH_COUNT):
             if not keith_awake:
                 self.call_service(
                     "scene/turn_on", entity_id="scene.bedroom_red"
