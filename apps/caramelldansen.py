@@ -1,13 +1,11 @@
 """Based on https://github.com/milesflo/caramelldansen-philips."""
 
 from __future__ import annotations
-import appdaemon.plugins.hass.hassapi as hass  # type: ignore
+import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
 
 import asyncio
 import itertools
-import datetime
 
-from typing import cast, Any
 from phue import Bridge, Group, PhueRegistrationException
 
 

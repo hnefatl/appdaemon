@@ -5,8 +5,7 @@ import datetime
 
 from typing import Optional, Callable, Any, NewType, Coroutine
 
-import appdaemon.plugins.hass.hassapi as hass  # type: ignore
-
+import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
 
 # Whether to print "verbose" log lines, intended to be debug logs for logic that doesn't cause state to change.
 _VERBOSE_LOG = True

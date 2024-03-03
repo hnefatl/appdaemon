@@ -3,7 +3,7 @@ import abc
 import enum
 from typing import Any, Dict, Tuple, Optional
 
-import appdaemon.plugins.hass.hassapi as hass  # type: ignore
+import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
 
 EVENT_TYPE = "zha_button_press"
 

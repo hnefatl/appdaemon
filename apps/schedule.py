@@ -1,8 +1,7 @@
-import appdaemon.plugins.hass.hassapi as hass  # type: ignore
+import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
 import asyncio
 import enum
 import json
-from typing import List
 
 # BEDROOM_BUTTON = "406a8b92e13d77d79941d59e37f03211"
 VACUUM_ENTITY_ID = "vacuum.roborock_s6"

@@ -2,9 +2,8 @@
 
 import re
 from typing import Any, Dict
-import itertools
 
-import appdaemon.plugins.hass.hassapi as hass  # type: ignore
+import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
 
 import zha_buttons
 import default_scene_service

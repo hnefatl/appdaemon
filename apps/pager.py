@@ -1,12 +1,8 @@
-import asyncio
-import base64
-import email
 import functools
-import imapclient
-import re
+import imapclient # pyright: ignore[reportMissingTypeStubs]
 import time
 
-import appdaemon.plugins.hass.hassapi as hass  # type: ignore
+import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
 
 LIGHT_FLASH_COUNT = 3
 

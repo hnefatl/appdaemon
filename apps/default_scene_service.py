@@ -1,9 +1,9 @@
 import datetime
 import enum
 import random
-from typing import Any, Dict, Optional, Sequence, Set, TypeVar
+from typing import Any, Dict, Optional, TypeVar
 
-import appdaemon.plugins.hass.hassapi as hass  # type: ignore
+import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
 
 EVENT_NAME = "default_scene_turn_on"
 T = TypeVar("T")
