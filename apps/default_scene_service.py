@@ -1,3 +1,5 @@
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
+
 import datetime
 import enum
 import random
@@ -110,7 +112,7 @@ class DefaultSceneService(hass.Hass):
             return f"scene.{room.name.lower()}_bright"
         return None
 
-    def _turn_on_default_scene(self, _event_name: str, data: Dict[str, Any], *_, **__):
+    def _turn_on_default_scene(self, _event_name: str, data: Dict[str, Any], *_: ..., **__: ...):
         room_names = data.get("rooms", None)
         assert isinstance(room_names, list), f"room names passed to {EVENT_NAME} must be a list, got: {room_names}"
         transition = data.get("transition", None)
