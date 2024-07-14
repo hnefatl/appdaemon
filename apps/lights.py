@@ -278,8 +278,7 @@ class Lights(hass.Hass):
             Room.make_room(
                 hass=self,
                 name="office",
-                no_motion_timeout=datetime.timedelta(minutes=30),
-                activity_sensors=[ActivitySensor.is_on(EntityId("switch.pc"))],
+                no_motion_timeout=datetime.timedelta(minutes=15),
             ),
             Room.make_room(
                 hass=self,
@@ -293,6 +292,7 @@ class Lights(hass.Hass):
                     ActivitySensor.isnt_off(EntityId("media_player.shield")),
                     ActivitySensor.isnt_off(EntityId("binary_sensor.ping_nintendo_switch")),
                     ActivitySensor.isnt_off(EntityId("media_player.living_room_speaker")),
+                    ActivitySensor.is_on(EntityId("switch.pc")),
                 ],
             ),
             Room.make_room(
@@ -304,28 +304,23 @@ class Lights(hass.Hass):
             Room.make_room(
                 hass=self,
                 name="bedroom",
+                motion_sensors={
+                    EntityId("binary_sensor.bedroom_motion_occupancy"),
+                    EntityId("binary_sensor.bedroom_entrance_motion_occupancy"),
+                },
                 no_motion_timeout=datetime.timedelta(minutes=1),
                 lights_only_if=[ActivitySensor.is_on(EntityId("input_boolean.keith_awake"))],
                 has_manual_control_toggle=True,
             ),
             Room.make_room(
                 hass=self,
-                name="corridor",
-                no_motion_timeout=datetime.timedelta(minutes=2, seconds=30),
-                lights_only_if=[
-                    ActivitySensor.is_below(EntityId("sensor.corridor_motion_illuminance"), 35)
-                ],
-                has_manual_control_toggle=True,
-            ),
-            Room.make_room(
-                hass=self,
                 name="entrance",
-                no_motion_timeout=datetime.timedelta(minutes=5),
+                no_motion_timeout=datetime.timedelta(minutes=3),
             ),
             Room.make_room(
                 hass=self,
                 name="kitchen",
-                no_motion_timeout=datetime.timedelta(minutes=5),
+                no_motion_timeout=datetime.timedelta(minutes=2),
             ),
         ]
 
