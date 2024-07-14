@@ -1,4 +1,5 @@
 **/*.pyc
+**/*.swp
 **/.mypycache/
 compiled/
 .appdaemon.yaml*

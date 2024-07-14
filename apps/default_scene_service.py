@@ -62,10 +62,11 @@ class DefaultSceneService(hass.Hass):
         return self.get_state(entity_id=entity_id) == "on"
 
     def _get_default_scene_for_room(self, room: Room) -> Optional[str]:
-        weekday = datetime.datetime.now().weekday()
         hour = datetime.datetime.now().hour
         keith_awake = self._get_boolean_state("input_boolean.keith_awake")
         nighttime_lights_enabled = self._get_boolean_state("input_boolean.nighttime_lights_enabled")
+
+        is_workday = datetime.datetime.now().weekday() < 5 and self._get_boolean_state("input_boolean.workday")
 
         # Special-case lighting for the corridor when the 3d-printer is active,
         # so I can check up on it more easily.
@@ -96,7 +97,7 @@ class DefaultSceneService(hass.Hass):
             keith_ooo = self._get_boolean_state("binary_sensor.keith_ooo")
             # If it's mon-fri before 3pm, default to work lighting. This isn't a perfect match for e.g. OOO, or
             # wakeup/relax calendar events, but due to race conditions and complexity it's an approximation.
-            if weekday < 5 and hour < 15 and not keith_ooo:
+            if is_workday and hour < 15 and not keith_ooo:
                 return "scene.office_concentrate"
             return get_day_stable_random_uniform(
                 room.value,
