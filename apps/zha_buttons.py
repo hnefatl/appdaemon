@@ -1,3 +1,5 @@
+"""Convert ZHA encoded button presses into more human-interpretable and easy to automate against presses."""
+
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 
 from __future__ import annotations
@@ -98,11 +100,8 @@ class IkeaDimmer(Button):
 
 
 DEVICE_MAPPING: Dict[str, Button] = {
-    "406a8b92e13d77d79941d59e37f03211": IkeaRemote("remote_control"),
-    # "132631a4a3ccafe42b642066622f70ca": IkeaDimmer("living_room_dimmer"),
-    "08a5b2fcc6bab34e04c26f24b04ba75f": IkeaDimmer("bedroom_dimmer"),
-    "62ea957fca278f5760865652190a189a": IkeaRemote("bedroom_remote_control"),
-    "0ebd6b19c3d0d9f18449f77f309de489": IkeaDimmer("extractor_fan_switch"),
+    "08a5b2fcc6bab34e04c26f24b04ba75f": IkeaDimmer("espresso_machine_switch"),
+    "406a8b92e13d77d79941d59e37f03211": IkeaRemote("bedroom_remote"),
 }
 IGNORED_DEVICES = {
     "ea07540a8e0dab2abaab5c804466465a",

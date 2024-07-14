@@ -10,9 +10,9 @@ lights:
   module: lights
   class: Lights
 
-buttons:
-  module: buttons
-  class: Buttons
+remotes:
+  module: remotes
+  class: Remotes
 
 pager:
   module: pager
