@@ -149,5 +149,4 @@ class ZhaButtonEvents(hass.Hass):
         (button, press) = button_and_press
 
         self.log(f"{press} on {device.name} {button}")
-        self.notify(title="Button press", name="mobile_app_keith_phone", message=str(data))
         self.fire_event(EVENT_TYPE, **button_click_to_event_kwargs(device, button, press))
