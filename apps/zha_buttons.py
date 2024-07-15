@@ -85,7 +85,9 @@ class IkeaRemote(Button):
         button = self.ARGS_BUTTON_MAPPING.get(tuple(args))
         if button is None:
             return None
-        press = self.COMMAND_PRESS_MAPPING.get(command, ButtonPress.SINGLE)
+        press = self.COMMAND_PRESS_MAPPING.get(command)
+        if press is None:
+            return None
         return (button, press)
 
 
@@ -147,4 +149,5 @@ class ZhaButtonEvents(hass.Hass):
         (button, press) = button_and_press
 
         self.log(f"{press} on {device.name} {button}")
+        self.notify(title="Button press", name="mobile_app_keith_phone", message=str(data))
         self.fire_event(EVENT_TYPE, **button_click_to_event_kwargs(device, button, press))
