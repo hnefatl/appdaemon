@@ -2,12 +2,11 @@
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 
-from __future__ import annotations
 import abc
 import enum
-from typing import Any, Dict, Tuple, Optional
+from typing import Any, Dict, Optional
 
-import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
+import appdaemon.plugins.hass.hassapi as hass  # pyright: ignore[reportMissingTypeStubs]
 
 EVENT_TYPE = "zha_button_press"
 
@@ -27,11 +26,15 @@ class Button(abc.ABC):
         self.name = name
 
     @abc.abstractmethod
-    def get_press_info(self, command: str, args: Tuple[int, ...]) -> Optional[Tuple[ButtonName, ButtonPress]]:
+    def get_press_info(
+        self, command: str, args: tuple[int, ...]
+    ) -> Optional[tuple[ButtonName, ButtonPress]]:
         pass
 
 
-def button_click_to_event_kwargs(device: Button, button: ButtonName, press: ButtonPress) -> dict[str, str]:
+def button_click_to_event_kwargs(
+    device: Button, button: ButtonName, press: ButtonPress
+) -> dict[str, str]:
     return {
         "device": device.name,
         "button": button,
@@ -39,7 +42,9 @@ def button_click_to_event_kwargs(device: Button, button: ButtonName, press: Butt
     }
 
 
-def button_click_from_event_kwargs(kwargs: Dict[str, str]) -> Optional[Tuple[Button, ButtonName, ButtonPress]]:
+def button_click_from_event_kwargs(
+    kwargs: Dict[str, str]
+) -> Optional[tuple[Button, ButtonName, ButtonPress]]:
     device_name = kwargs.get("device")
     button = kwargs.get("button")
     press_name = kwargs.get("press")
@@ -60,7 +65,7 @@ def button_click_from_event_kwargs(kwargs: Dict[str, str]) -> Optional[Tuple[But
 
 
 class IkeaRemote(Button):
-    ARGS_BUTTON_MAPPING = {
+    ARGS_BUTTON_MAPPING: dict[tuple[int, ...], str] = {
         (): "centre",
         (0, 43, 5): "top",
         (0, 84): "top",
@@ -81,8 +86,10 @@ class IkeaRemote(Button):
         "hold": ButtonPress.HOLD,  # left and right buttons
     }
 
-    def get_press_info(self, command: str, args: Tuple[int, ...]) -> Optional[Tuple[ButtonName, ButtonPress]]:
-        button = self.ARGS_BUTTON_MAPPING.get(tuple(args))
+    def get_press_info(
+        self, command: str, args: tuple[int, ...]
+    ) -> Optional[tuple[ButtonName, ButtonPress]]:
+        button = self.ARGS_BUTTON_MAPPING.get(args)
         if button is None:
             return None
         press = self.COMMAND_PRESS_MAPPING.get(command)
@@ -92,13 +99,16 @@ class IkeaRemote(Button):
 
 
 class IkeaDimmer(Button):
-    def get_press_info(self, command: str, args: Tuple[int, ...]) -> Optional[Tuple[ButtonName, ButtonPress]]:
-        return {
+    def get_press_info(
+        self, command: str, args: tuple[int, ...]
+    ) -> Optional[tuple[ButtonName, ButtonPress]]:
+        mapping: dict[tuple[str, tuple[int, ...]], tuple[str, ButtonPress]] = {
             ("on", ()): ("top", ButtonPress.SINGLE),
             ("off", ()): ("bottom", ButtonPress.SINGLE),
             ("move_with_on_off", (0, 83)): ("top", ButtonPress.HOLD),
             ("move", (1, 83, 0, 0)): ("bottom", ButtonPress.HOLD),
-        }.get((command, args))
+        }
+        return mapping.get((command, args))
 
 
 DEVICE_MAPPING: Dict[str, Button] = {
@@ -119,7 +129,9 @@ class ZhaButtonEvents(hass.Hass):
     def initialize(self):
         self.listen_event(callback=self._on_zha_event, event="zha_event")
 
-    def _on_zha_event(self, _event_name: str, data: Dict[str, Any], _kwargs: Dict[str, Any]):
+    def _on_zha_event(
+        self, _event_name: str, data: Dict[str, Any], _kwargs: Dict[str, Any]
+    ):
         device_id = data.get("device_id")
         if device_id is None or not isinstance(device_id, str):
             self.log(f"Invalid device: {device_id}, {data}")
@@ -150,4 +162,6 @@ class ZhaButtonEvents(hass.Hass):
         (button, press) = button_and_press
 
         self.log(f"{press} on {device.name} {button}")
-        self.fire_event(EVENT_TYPE, **button_click_to_event_kwargs(device, button, press))
+        self.fire_event(
+            EVENT_TYPE, **button_click_to_event_kwargs(device, button, press)
+        )
