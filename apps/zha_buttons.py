@@ -4,7 +4,7 @@
 
 import abc
 import enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 import appdaemon.plugins.hass.hassapi as hass  # pyright: ignore[reportMissingTypeStubs]
 
@@ -150,9 +150,10 @@ class ZhaButtonEvents(hass.Hass):
             self.log(f"Invalid command: {command}, {data}")
             return
         args = data.get("args")
-        if args is None or not isinstance(args, list):
+        if args is None or not isinstance(args, list) or any(not isinstance(x, int) for x in args):
             self.log(f"Invalid args: {args}")
             return
+        args = cast(list[int], args)
 
         button_and_press = device.get_press_info(command, tuple(args))
         if button_and_press is None:
