@@ -1,3 +1,7 @@
+typed_hass:
+  module: typed_hass
+  global: true
+
 zha_buttons:
   module: zha_buttons
   class: ZhaButtonEvents

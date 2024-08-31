@@ -1,2 +1,7 @@
+# On Windows, install by opening a powershell terminal from vscode (pointing to
+# remote filesystem) then run
+#
+#   python -m pip install -r .\dev-requirements.txt
+
 imapclient==3.0.1
 phue==1.1
