@@ -6,6 +6,7 @@ import dataclasses
 import datetime
 
 from typing import Optional, Callable, TypeVar, ParamSpec, Concatenate
+from typing_extensions import override
 from functools import wraps
 
 import typed_hass
@@ -99,7 +100,7 @@ class Room(abc.ABC):
         # where movement while the light is turning off off prevents the lights
         # from coming back on, until movement stops being detected and is
         # subsequently detected again.
-        self._lights_on = self._is_light_group_on()
+        self._lights_on = self._are_lights_off()
 
     def initialise(self, hass: typed_hass.Hass):
         for motion_sensor in self._motion_sensors:
@@ -121,14 +122,13 @@ class Room(abc.ABC):
                 entity_id=activity_sensor.entity,
             )
 
+    @abc.abstractmethod
     def _turn_off_lights(self) -> None:
-        self._lights_on = False
-        self._hass.call_service(
-            service="light/turn_off", transition=5, area_id=self._name
-        )
+        pass
 
-    def _is_light_group_on(self) -> bool:
-        return self._hass.get_state(EntityId(f"group.{self._name}_lights")) == "off"
+    @abc.abstractmethod
+    def _are_lights_off(self) -> bool:
+        pass
 
     def _get_active_sensors(self) -> list[ActivitySensor]:
         return [
@@ -179,7 +179,7 @@ class Room(abc.ABC):
                 f"motion in {self._name} from {entity_id} but required sensors aren't active: {inactive_required_sensors}"
             )
             return
-        area_lights_off = self._is_light_group_on()
+        area_lights_off = self._are_lights_off()
         # Only load the scene if the lights are off: if the lights are already
         # on, leave them as they are.
         if area_lights_off or not self._lights_on:
@@ -236,16 +236,29 @@ class Room(abc.ABC):
                 f"{self._no_motion_timeout.seconds}, so room occupied"
             )
 
+class LightGroupRoom(Room):
+    @override
+    def _turn_off_lights(self) -> None:
+        self._lights_on = False
+        self._hass.call_service(
+            service="light/turn_off", transition=5, area_id=self._name
+        )
+
+    @override
+    def _are_lights_off(self) -> bool:
+        return self._hass.get_state(EntityId(f"group.{self._name}_lights")) == "off"
+
+
 
 class Lights(typed_hass.Hass):
     def initialize(self):
         ROOMS = [
-            Room(
+            LightGroupRoom(
                 hass=self,
                 name="office",
                 no_motion_timeout=datetime.timedelta(minutes=15),
             ),
-            Room(
+            LightGroupRoom(
                 hass=self,
                 name="living_room",
                 no_motion_timeout=datetime.timedelta(minutes=15),
@@ -264,7 +277,7 @@ class Lights(typed_hass.Hass):
                     ActivitySensor.is_on(EntityId("switch.pc")),
                 ],
             ),
-            Room(
+            LightGroupRoom(
                 hass=self,
                 name="bathroom",
                 no_motion_timeout=datetime.timedelta(minutes=2),
@@ -272,7 +285,7 @@ class Lights(typed_hass.Hass):
                     ActivitySensor.is_on(EntityId("input_boolean.shower_active"))
                 ],
             ),
-            Room(
+            LightGroupRoom(
                 hass=self,
                 name="bedroom",
                 motion_sensors={
@@ -285,12 +298,12 @@ class Lights(typed_hass.Hass):
                 ],
                 has_manual_control_toggle=True,
             ),
-            Room(
+            LightGroupRoom(
                 hass=self,
                 name="entrance",
                 no_motion_timeout=datetime.timedelta(minutes=3),
             ),
-            Room(
+            LightGroupRoom(
                 hass=self,
                 name="kitchen",
                 no_motion_timeout=datetime.timedelta(minutes=2),
