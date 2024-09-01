@@ -5,7 +5,7 @@ import abc
 import dataclasses
 import datetime
 
-from typing import Optional, Callable, TypeVar, ParamSpec, Concatenate
+from typing import Any, Optional, Callable, TypeVar, ParamSpec, Concatenate
 from typing_extensions import override
 from functools import wraps
 
@@ -174,7 +174,7 @@ class Room(abc.ABC):
             self._hass.log(msg)
 
     @skip_if_manual_control_enabled
-    def on_room_motion(self, entity_id: str, *_):
+    def on_room_motion(self, entity_id: str, *_: Any):
         self._last_motions[EntityId(entity_id)] = datetime.datetime.now()
 
         inactive_required_sensors = self._get_inactive_required_sensors()
@@ -199,7 +199,7 @@ class Room(abc.ABC):
             )
 
     @skip_if_manual_control_enabled
-    def on_room_no_motion(self, *_):
+    def on_room_no_motion(self, *_: Any):
         active_devices = self._get_active_sensors()
         if active_devices:
             self._verbose_log(
@@ -213,7 +213,7 @@ class Room(abc.ABC):
         self._turn_off_lights()
 
     @skip_if_manual_control_enabled
-    def on_activity_sensor_change(self, entity: str, *_):
+    def on_activity_sensor_change(self, entity: str, *_: Any):
         active_devices = self._get_active_sensors()
         if active_devices:
             self._log(f"active devices remaining: {active_devices}")
