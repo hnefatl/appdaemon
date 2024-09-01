@@ -241,7 +241,7 @@ class Room(abc.ABC):
 
 
 class LightGroupRoom(Room):
-    def __init__(self, name: str, area_name: Optional[str] = None, **kwargs): # type: ignore
+    def __init__(self, name: str, area_name: Optional[str] = None, **kwargs):  # type: ignore
         self._area_name = name if area_name is None else area_name
         super().__init__(name=name, **kwargs)  # type: ignore
 
@@ -272,16 +272,12 @@ class SwitchLightRoom(Room):
     @override
     def _turn_on_lights(self) -> None:
         self._lights_on = True
-        self._hass.call_service(
-            service="switch/turn_on", entity_id=str(self._switch_name)
-        )
+        self._hass.call_service(service="switch/turn_on", entity_id=self._switch_name)
 
     @override
     def _turn_off_lights(self) -> None:
         self._lights_on = False
-        self._hass.call_service(
-            service="switch/turn_off", entity_id=str(self._switch_name)
-        )
+        self._hass.call_service(service="switch/turn_off", entity_id=self._switch_name)
 
     @override
     def _are_lights_off(self) -> bool:

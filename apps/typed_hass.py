@@ -44,3 +44,8 @@ class Hass(hass.Hass):
             entity_id=str(entity_id),
             **kwargs,  # type: ignore
         )
+
+    def call_service(self, entity_id: Optional[EntityId] = None, **kwargs):  # type: ignore
+        if entity_id is not None:
+            kwargs["entity_id"] = str(entity_id)
+        super().call_service(**kwargs)  # type: ignore
