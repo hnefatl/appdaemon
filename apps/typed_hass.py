@@ -32,9 +32,15 @@ class Hass(hass.Hass):
         new: Optional[str] = None,
         duration: Optional[datetime.timedelta] = None,
     ):
+        # The appdaemon API does things like "if duration in kwargs" without None-checking...
+        kwargs = {}
+        if new is not None:
+            kwargs["new"] = new
+        if duration is not None:
+            kwargs["duration"] = duration.seconds
+
         super().listen_state(
             callback=callback,
             entity_id=str(entity_id),
-            new=new,
-            duration=duration.seconds if duration is not None else None,
+            **kwargs,  # type: ignore
         )

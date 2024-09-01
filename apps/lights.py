@@ -123,6 +123,10 @@ class Room(abc.ABC):
             )
 
     @abc.abstractmethod
+    def _turn_on_lights(self) -> None:
+        pass
+
+    @abc.abstractmethod
     def _turn_off_lights(self) -> None:
         pass
 
@@ -156,7 +160,7 @@ class Room(abc.ABC):
         @wraps(f)
         def inner(self: RoomVar, *args: P.args, **kwargs: P.kwargs):
             if self.manual_control_enabled():
-                self._hass.log(f"Manual control enabled in {self._name}, no action")
+                self._log(f"Manual control enabled in {self._name}, no action")
                 return
             f(self, *args, **kwargs)
 
@@ -179,17 +183,16 @@ class Room(abc.ABC):
                 f"motion in {self._name} from {entity_id} but required sensors aren't active: {inactive_required_sensors}"
             )
             return
-        area_lights_off = self._are_lights_off()
+        lights_off = self._are_lights_off()
         # Only load the scene if the lights are off: if the lights are already
         # on, leave them as they are.
-        if area_lights_off or not self._lights_on:
-            self._log(f"motion in {self._name} from {entity_id}, loading default scene")
+        if lights_off or not self._lights_on:
+            self._log(f"motion in {self._name} from {entity_id}, turning on lights")
             if not self._lights_on:
                 self._verbose_log(
                     "edge case: lights were on in HA but off in the model."
                 )
-            self._hass.fire_event(event="default_scene_turn_on", rooms=[self._name])
-            self._lights_on = True
+            self._turn_on_lights()
         else:
             self._verbose_log(
                 f"motion in {self._name} from {entity_id} but lights already on"
@@ -236,18 +239,53 @@ class Room(abc.ABC):
                 f"{self._no_motion_timeout.seconds}, so room occupied"
             )
 
+
 class LightGroupRoom(Room):
+    def __init__(self, name: str, area_name: Optional[str] = None, **kwargs): # type: ignore
+        self._area_name = name if area_name is None else area_name
+        super().__init__(name=name, **kwargs)  # type: ignore
+
+    @override
+    def _turn_on_lights(self) -> None:
+        self._lights_on = True
+        self._hass.fire_event(event="default_scene_turn_on", rooms=[self._name])
+
     @override
     def _turn_off_lights(self) -> None:
         self._lights_on = False
         self._hass.call_service(
-            service="light/turn_off", transition=5, area_id=self._name
+            service="light/turn_off", transition=5, area_id=self._area_name
         )
 
     @override
     def _are_lights_off(self) -> bool:
-        return self._hass.get_state(EntityId(f"group.{self._name}_lights")) == "off"
+        return (
+            self._hass.get_state(EntityId(f"group.{self._area_name}_lights")) == "off"
+        )
 
+
+class SwitchLightRoom(Room):
+    def __init__(self, switch_name: EntityId, **kwargs):  # type: ignore
+        self._switch_name = switch_name
+        super().__init__(**kwargs)  # type: ignore
+
+    @override
+    def _turn_on_lights(self) -> None:
+        self._lights_on = True
+        self._hass.call_service(
+            service="switch/turn_on", entity_id=str(self._switch_name)
+        )
+
+    @override
+    def _turn_off_lights(self) -> None:
+        self._lights_on = False
+        self._hass.call_service(
+            service="switch/turn_off", entity_id=str(self._switch_name)
+        )
+
+    @override
+    def _are_lights_off(self) -> bool:
+        return self._hass.get_state(self._switch_name) == "off"
 
 
 class Lights(typed_hass.Hass):
@@ -277,9 +315,10 @@ class Lights(typed_hass.Hass):
                     ActivitySensor.is_on(EntityId("switch.pc")),
                 ],
             ),
-            LightGroupRoom(
+            SwitchLightRoom(
                 hass=self,
                 name="bathroom",
+                switch_name=EntityId("switch.bathroom_light_and_fan"),
                 no_motion_timeout=datetime.timedelta(minutes=2),
                 activity_sensors=[
                     ActivitySensor.is_on(EntityId("input_boolean.shower_active"))
