@@ -55,6 +55,12 @@ class ActivitySensor:
             entity, lambda s: float(s) < threshold, descriptor=f"< {threshold}"
         )
 
+    @staticmethod
+    def is_above(entity: EntityId, threshold: float) -> ActivitySensor:
+        return ActivitySensor(
+            entity, lambda s: float(s) > threshold, descriptor=f"> {threshold}"
+        )
+
 
 class Room(abc.ABC):
     def __init__(
@@ -317,7 +323,9 @@ class Lights(typed_hass.Hass):
                 switch_name=EntityId("switch.bathroom_light_and_fan"),
                 no_motion_timeout=datetime.timedelta(minutes=2),
                 activity_sensors=[
-                    ActivitySensor.is_on(EntityId("input_boolean.shower_active"))
+                    ActivitySensor.is_on(EntityId("input_boolean.shower_active")),
+                    # Can't turn off the lights because they're also the extractor fan :(
+                    ActivitySensor.is_above(EntityId("sensor.bathroom_humidity"), 60),
                 ],
             ),
             LightGroupRoom(
