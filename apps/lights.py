@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import abc
-import dataclasses
 import datetime
 
 from typing import Any, Optional, Callable, TypeVar, ParamSpec, Concatenate
@@ -22,14 +21,20 @@ RoomVar = TypeVar("RoomVar", bound="Room")
 _VERBOSE_LOG = True
 
 
-@dataclasses.dataclass
 class ActivitySensor:
-    entity: EntityId
-    active_predicate: Callable[[str], bool]
-    descriptor: str
+    def __init__(
+        self,
+        entity: EntityId,
+        predicate: Callable[[typed_hass.Hass, str], bool],
+        descriptor: str,
+    ):
+        self.entity = entity
+        self._predicate = predicate
+        self.descriptor = descriptor
+        # active_predicate:
 
     def is_active(self, hass: typed_hass.Hass) -> bool:
-        return self.active_predicate(hass.get_state(self.entity))
+        return self._predicate(hass, hass.get_state(self.entity))
 
     def __str__(self) -> str:
         return f"{self.entity} {self.descriptor}"
@@ -38,27 +43,52 @@ class ActivitySensor:
         return str(self)
 
     @staticmethod
+    def _single_entity_predicate(
+        entity: EntityId, predicate: Callable[[str], bool], *args, **kwargs  # type: ignore
+    ):
+        return ActivitySensor(
+            entity, lambda _, s: predicate(s), *args, **kwargs  # type: ignore
+        )
+
+    @staticmethod
     def is_on(entity: EntityId) -> ActivitySensor:
-        return ActivitySensor(entity, lambda s: s == "on", descriptor="is on")
+        return ActivitySensor._single_entity_predicate(
+            entity, lambda s: s == "on", descriptor="is on"
+        )
 
     @staticmethod
     def is_off(entity: EntityId) -> ActivitySensor:
-        return ActivitySensor(entity, lambda s: s == "off", descriptor="is off")
+        return ActivitySensor._single_entity_predicate(
+            entity, lambda s: s == "off", descriptor="is off"
+        )
 
     @staticmethod
     def isnt_off(entity: EntityId) -> ActivitySensor:
-        return ActivitySensor(entity, lambda s: s != "off", descriptor="isn't off")
+        return ActivitySensor._single_entity_predicate(
+            entity, lambda s: s != "off", descriptor="isn't off"
+        )
 
     @staticmethod
     def is_below(entity: EntityId, threshold: float) -> ActivitySensor:
-        return ActivitySensor(
+        return ActivitySensor._single_entity_predicate(
             entity, lambda s: float(s) < threshold, descriptor=f"< {threshold}"
         )
 
     @staticmethod
     def is_above(entity: EntityId, threshold: float) -> ActivitySensor:
-        return ActivitySensor(
+        return ActivitySensor._single_entity_predicate(
             entity, lambda s: float(s) > threshold, descriptor=f"> {threshold}"
+        )
+
+    @staticmethod
+    def compared_to(
+        entity: EntityId,
+        other: EntityId,
+        comparator: Callable[[str, str], bool],
+        descriptor: str,
+    ):
+        return ActivitySensor(
+            entity, lambda h, s: comparator(s, h.get_state(other)), descriptor
         )
 
 
@@ -325,7 +355,15 @@ class Lights(typed_hass.Hass):
                 activity_sensors=[
                     ActivitySensor.is_on(EntityId("input_boolean.shower_active")),
                     # Can't turn off the lights because they're also the extractor fan :(
-                    ActivitySensor.is_above(EntityId("sensor.bathroom_humidity"), 60),
+                    ActivitySensor.compared_to(
+                        EntityId("sensor.bathroom_humidity"),
+                        EntityId("sensor.office_humidity"),
+                        # Wait until bathroom is close to the ambient humidity
+                        # as measured in office. Hardcoded thresholds don't
+                        # work well with the highly variable humidity here.
+                        lambda b, o: float(b) > float(o) + 5,
+                        descriptor="bathroom humidity > office humidity + 5",
+                    ),
                 ],
             ),
             LightGroupRoom(
