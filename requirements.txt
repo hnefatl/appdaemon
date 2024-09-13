@@ -5,4 +5,5 @@
 
 imapclient==3.0.1
 phue==1.1
-typing-extensions = 4.12
+typing-extensions==4.12
+requests==2.32

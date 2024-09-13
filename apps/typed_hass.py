@@ -8,14 +8,19 @@ import datetime
 import appdaemon.plugins.hass.hassapi as hass  # pyright: ignore[reportMissingTypeStubs]
 
 EntityId = NewType("EntityId", str)
+# https://appdaemon.readthedocs.io/en/latest/APPGUIDE.html#state-callbacks
 StateCallback = Callable[[EntityId, str, Optional[str], str, dict[str, Any]], None]
+# https://appdaemon.readthedocs.io/en/latest/APPGUIDE.html#about-event-callbacks
+# Args are event name, event arguments, user-provided arguments at the callsite.
+EventCallback = Callable[[str, dict[str, Any], dict[str, Any]], None]
 
 
 class Hass(hass.Hass):
     """Limited but usefully-typed overrides."""
 
-    def __init__(self, *args, **kwargs):  # type: ignore
-        return super().__init__(*args, **kwargs)  # type: ignore
+    def __init__(self, *args: Any, **kwargs: Any):
+        self.args: dict[str, str]
+        return super().__init__(*args, **kwargs)
 
     def get_state(
         self,
@@ -45,7 +50,25 @@ class Hass(hass.Hass):
             **kwargs,  # type: ignore
         )
 
-    def call_service(self, entity_id: Optional[EntityId] = None, **kwargs):  # type: ignore
+    def listen_event(
+        self,
+        callback: EventCallback,
+        event: str,
+    ):
+        super().listen_event(callback=callback, event=event)
+
+    def call_service(
+        self,
+        service: str,
+        entity_id: Optional[EntityId] = None,
+        data: Optional[dict[str, Any]] = None,
+        **kwargs: Any
+    ):
         if entity_id is not None:
             kwargs["entity_id"] = str(entity_id)
-        super().call_service(**kwargs)  # type: ignore
+        if data is not None:
+            kwargs["data"] = data
+        super().call_service(service=service, **kwargs)
+
+    def log(self, message: str, **kwargs: Any):
+        super().log(message, **kwargs)

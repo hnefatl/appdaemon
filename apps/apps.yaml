@@ -30,3 +30,9 @@ caramelldansen:
   module: caramelldansen
   class: CaramellDansen
   bridge_ip: !secret hue_bridge_ip
+
+wakeup_info:
+  module: wakeup_info
+  class: WakeupInfo
+  location: !secret wakeup_coordinates
+  api_key: !secret wakeup_api_key
