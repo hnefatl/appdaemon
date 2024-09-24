@@ -43,7 +43,7 @@ class Hass(hass.Hass):
             kwargs["new"] = new
         if duration is not None:
             kwargs["duration"] = duration.seconds
-
+        
         super().listen_state(
             callback=callback,
             entity_id=str(entity_id),
@@ -72,3 +72,13 @@ class Hass(hass.Hass):
 
     def log(self, message: str, **kwargs: Any):
         super().log(message, **kwargs)
+
+    def tts_speak(self, message: str, media_player: EntityId):
+        self.log(f"speaking: '{message}'")
+        self.call_service(
+            service="tts/speak",
+            entity_id=EntityId("tts.piper"),
+            cache=False,
+            media_player_entity_id=str(media_player),
+            message=message,
+        )

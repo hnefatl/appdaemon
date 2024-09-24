@@ -141,23 +141,16 @@ class WakeupInfo(typed_hass.Hass):
         yesterday_mean_temp = mean(
             forecast.temperatures(hours=range(9, 18), day_delta=-1)
         )
-        self.log(f"today mean temp: {today_mean_temp}, yesterday mean temp: {yesterday_mean_temp}")
+        self.log(
+            f"today mean temp: {today_mean_temp}, yesterday mean temp: {yesterday_mean_temp}"
+        )
         if today_mean_temp <= yesterday_mean_temp - 2:
             messages.append("It'll be cold today.")
         if today_mean_temp >= yesterday_mean_temp + 2:
             messages.append("It'll be hot today.")
 
         if messages:
-            self.speak("\n".join(messages))
-
-    def speak(self, message: str, media_player: typed_hass.EntityId | None = None):
-        if media_player is None:
-            media_player = typed_hass.EntityId("media_player.bedroom_speaker")
-        self.log(f"speaking: '{message}'")
-        self.call_service(
-            service="tts/speak",
-            entity_id=typed_hass.EntityId("tts.piper"),
-            cache=False,
-            media_player_entity_id=str(media_player),
-            message=message,
-        )
+            self.tts_speak(
+                "\n".join(messages),
+                media_player=typed_hass.EntityId("media_player.bedroom_speaker"),
+            )
