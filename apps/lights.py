@@ -18,7 +18,7 @@ P = ParamSpec("P")
 RoomVar = TypeVar("RoomVar", bound="Room")
 
 # Whether to print "verbose" log lines, intended to be debug logs for logic that doesn't cause state to change.
-_VERBOSE_LOG = True
+_VERBOSE_LOG = False
 
 
 class ActivitySensor:
