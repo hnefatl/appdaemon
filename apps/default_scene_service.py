@@ -6,7 +6,7 @@ import random
 from typing import Any, Dict, Optional, TypeVar
 
 import typed_hass
-from typed_hass import EntityId
+from typed_hass import EntityId, Scene, BinarySensor, InputBoolean
 
 EVENT_NAME = "default_scene_turn_on"
 T = TypeVar("T")
@@ -36,7 +36,13 @@ ROOM_NAME_MAPPING = {room.name.lower(): room for room in list(Room)}
 def get_day_stable_random(seed: int, values: dict[T, int]) -> T:
     """Get a random value which is stable throughout a given day for the same given seed."""
     # Get the timestamp for the start of "today"
-    today_seed = int((datetime.datetime.combine(datetime.date.today(), datetime.datetime.min.time())).timestamp())
+    today_seed = int(
+        (
+            datetime.datetime.combine(
+                datetime.date.today(), datetime.datetime.min.time()
+            )
+        ).timestamp()
+    )
     rand = random.Random(today_seed + seed)
 
     # The order of keys and values within the dict are the same
@@ -62,67 +68,77 @@ class DefaultSceneService(typed_hass.Hass):
     def _get_boolean_state(self, entity_id: EntityId) -> bool:
         return self.get_state(entity_id=entity_id) == "on"
 
-    def _get_default_scene_for_room(self, room: Room) -> Optional[str]:
+    def _get_default_scene_for_room(self, room: Room) -> Optional[EntityId]:
         hour = datetime.datetime.now().hour
-        keith_awake = self._get_boolean_state(EntityId("input_boolean.keith_awake"))
-        nighttime_lights_enabled = self._get_boolean_state(EntityId("input_boolean.nighttime_lights_enabled"))
+        keith_awake = self._get_boolean_state(InputBoolean("keith_awake"))
+        nighttime_lights_enabled = self._get_boolean_state(
+            InputBoolean("nighttime_lights_enabled")
+        )
 
-        is_workday = datetime.datetime.now().weekday() < 5 and self._get_boolean_state(EntityId("input_boolean.workday"))
+        is_workday = datetime.datetime.now().weekday() < 5 and self._get_boolean_state(
+            InputBoolean("workday")
+        )
 
         # Special-case lighting for the corridor when the 3d-printer is active,
         # so I can check up on it more easily.
-        if room is Room.CORRIDOR and self._get_boolean_state(EntityId("binary_sensor.octoprint_printing")):
-            return f"scene.{room.name.lower()}_bright"
+        if room is Room.CORRIDOR and self._get_boolean_state(
+            BinarySensor("octoprint_printing")
+        ):
+            return Scene(f"{room.name.lower()}_bright")
 
         # In the late evening and early morning, default to dim lights in all rooms.
         if nighttime_lights_enabled and between_hours(hour, 0, 6):
-            return f"scene.{room.name.lower()}_dim"
+            return Scene(f"{room.name.lower()}_dim")
 
         # In the bedroom, if still in "asleep mode" then always do dim.
         if room is Room.BEDROOM and not keith_awake:
-            return "scene.bedroom_dim"
+            return Scene("bedroom_dim")
 
         if room is Room.LIVING_ROOM:
             return get_day_stable_random_uniform(
                 room.value,
                 {
-                    "scene.living_room_arctic_aurora",
-                    "scene.living_room_ibiza",
-                    "scene.living_room_savanna_sunset",
-                    "scene.living_room_soho",
-                    "scene.living_room_spring_blossom",
-                    "scene.living_room_tropical_twilight",
+                    Scene("living_room_arctic_aurora"),
+                    Scene("living_room_ibiza"),
+                    Scene("living_room_savanna_sunset"),
+                    Scene("living_room_soho"),
+                    Scene("living_room_spring_blossom"),
+                    Scene("living_room_tropical_twilight"),
                 },
             )
         elif room is Room.OFFICE:
-            keith_ooo = self._get_boolean_state(EntityId("binary_sensor.keith_ooo"))
+            keith_ooo = self._get_boolean_state(BinarySensor("keith_ooo"))
             # If it's mon-fri before 3pm, default to work lighting. This isn't a perfect match for e.g. OOO, or
             # wakeup/relax calendar events, but due to race conditions and complexity it's an approximation.
             if is_workday and hour < 15 and not keith_ooo:
-                return "scene.office_concentrate"
+                return Scene("office_concentrate")
             return get_day_stable_random_uniform(
                 room.value,
                 {
-                    "scene.office_arctic_aurora",
-                    "scene.office_savanna_sunset",
-                    "scene.office_soho",
-                    "scene.office_spring_blossom",
-                    "scene.office_tropical_twilight",
+                    Scene("office_arctic_aurora"),
+                    Scene("office_savanna_sunset"),
+                    Scene("office_soho"),
+                    Scene("office_spring_blossom"),
+                    Scene("office_tropical_twilight"),
                 },
             )
         else:
-            return f"scene.{room.name.lower()}_bright"
+            return Scene(f"{room.name.lower()}_bright")
 
     def _turn_on_default_scene(self, _event_name: str, data: Dict[str, Any], *_: Any):
         room_names = data.get("rooms", None)
-        assert isinstance(room_names, list), f"room names passed to {EVENT_NAME} must be a list, got: {room_names}"
+        assert isinstance(
+            room_names, list
+        ), f"room names passed to {EVENT_NAME} must be a list, got: {room_names}"
         transition = data.get("transition", None)
         assert transition is None or isinstance(
             transition, int
         ), f"transition passed to {EVENT_NAME} must be an int, got: {transition}"
 
         for room_name in room_names:
-            assert isinstance(room_name, str), f"room name passed to {EVENT_NAME} must be a str, got: {room_name}"
+            assert isinstance(
+                room_name, str
+            ), f"room name passed to {EVENT_NAME} must be a str, got: {room_name}"
             room = ROOM_NAME_MAPPING.get(room_name)
             if room is None:
                 continue
@@ -132,5 +148,7 @@ class DefaultSceneService(typed_hass.Hass):
                 continue
             # Passing a None transition fails, and I suspect a transition of 0
             # might be different to "no transition"...
-            optional_transition = {} if transition is None else {"transition": transition}
+            optional_transition = (
+                {} if transition is None else {"transition": transition}
+            )
             self.turn_on(entity_id=scene, **optional_transition)

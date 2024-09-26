@@ -27,6 +27,7 @@ Group = make_typed_entity_id("group")
 BinarySensor = make_typed_entity_id("binary_sensor")
 MediaPlayer = make_typed_entity_id("media_player")
 TTS = make_typed_entity_id("tts")
+Scene = make_typed_entity_id("Scene")
 
 
 # https://appdaemon.readthedocs.io/en/latest/APPGUIDE.html#state-callbacks
@@ -111,4 +112,9 @@ class Hass(hass.Hass):
             cache=False,
             media_player_entity_id=str(media_player),
             message=message,
+        )
+
+    def turn_on(self, entity_id: EntityId, **kwargs: Any):
+        self.call_service(
+            service="homeassistant/turn_on", entity_id=entity_id, **kwargs
         )
