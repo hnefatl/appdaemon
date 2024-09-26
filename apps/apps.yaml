@@ -9,6 +9,7 @@ zha_buttons:
 default_scene_service:
   module: default_scene_service
   class: DefaultSceneService
+  log_level: WARNING
 
 lights:
   module: lights
