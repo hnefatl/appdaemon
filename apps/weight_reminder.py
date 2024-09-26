@@ -26,7 +26,7 @@ class WeightReminder(typed_hass.Hass):
     def bedroom_motion(self, *_: Any):
         now = datetime.now(tz=tzlocal())
 
-        recent_after_shower = now < self._last_shower_on + timedelta(minutes=30)
+        recent_after_shower = now < self._last_shower_on + timedelta(minutes=60)
         havent_reminded_today = self._last_reminder.date() < now.date()
         if recent_after_shower and havent_reminded_today:
             self._last_reminder = now
