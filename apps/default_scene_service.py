@@ -5,7 +5,8 @@ import enum
 import random
 from typing import Any, Dict, Optional, TypeVar
 
-import appdaemon.plugins.hass.hassapi as hass # pyright: ignore[reportMissingTypeStubs]
+import typed_hass
+from typed_hass import EntityId
 
 EVENT_NAME = "default_scene_turn_on"
 T = TypeVar("T")
@@ -53,24 +54,24 @@ def get_day_stable_random_uniform(seed: int, values: set[T]) -> T:
 # This can't be a proper service because AppDaemon can't create HA services :( Instead, using the workaround from
 # https://community.home-assistant.io/t/ad-and-register-service-but-getting-service-not-found/185258/8 to listen for an
 # event and treat it as a service call.
-class DefaultSceneService(hass.Hass):
+class DefaultSceneService(typed_hass.Hass):
 
     def initialize(self):
         self.listen_event(event=EVENT_NAME, callback=self._turn_on_default_scene)
 
-    def _get_boolean_state(self, entity_id: str) -> bool:
+    def _get_boolean_state(self, entity_id: EntityId) -> bool:
         return self.get_state(entity_id=entity_id) == "on"
 
     def _get_default_scene_for_room(self, room: Room) -> Optional[str]:
         hour = datetime.datetime.now().hour
-        keith_awake = self._get_boolean_state("input_boolean.keith_awake")
-        nighttime_lights_enabled = self._get_boolean_state("input_boolean.nighttime_lights_enabled")
+        keith_awake = self._get_boolean_state(EntityId("input_boolean.keith_awake"))
+        nighttime_lights_enabled = self._get_boolean_state(EntityId("input_boolean.nighttime_lights_enabled"))
 
-        is_workday = datetime.datetime.now().weekday() < 5 and self._get_boolean_state("input_boolean.workday")
+        is_workday = datetime.datetime.now().weekday() < 5 and self._get_boolean_state(EntityId("input_boolean.workday"))
 
         # Special-case lighting for the corridor when the 3d-printer is active,
         # so I can check up on it more easily.
-        if room is Room.CORRIDOR and self._get_boolean_state("binary_sensor.octoprint_printing"):
+        if room is Room.CORRIDOR and self._get_boolean_state(EntityId("binary_sensor.octoprint_printing")):
             return f"scene.{room.name.lower()}_bright"
 
         # In the late evening and early morning, default to dim lights in all rooms.
@@ -94,7 +95,7 @@ class DefaultSceneService(hass.Hass):
                 },
             )
         elif room is Room.OFFICE:
-            keith_ooo = self._get_boolean_state("binary_sensor.keith_ooo")
+            keith_ooo = self._get_boolean_state(EntityId("binary_sensor.keith_ooo"))
             # If it's mon-fri before 3pm, default to work lighting. This isn't a perfect match for e.g. OOO, or
             # wakeup/relax calendar events, but due to race conditions and complexity it's an approximation.
             if is_workday and hour < 15 and not keith_ooo:
@@ -111,9 +112,8 @@ class DefaultSceneService(hass.Hass):
             )
         else:
             return f"scene.{room.name.lower()}_bright"
-        return None
 
-    def _turn_on_default_scene(self, _event_name: str, data: Dict[str, Any], *_: ..., **__: ...):
+    def _turn_on_default_scene(self, _event_name: str, data: Dict[str, Any], *_: Any):
         room_names = data.get("rooms", None)
         assert isinstance(room_names, list), f"room names passed to {EVENT_NAME} must be a list, got: {room_names}"
         transition = data.get("transition", None)
@@ -127,7 +127,7 @@ class DefaultSceneService(hass.Hass):
             if room is None:
                 continue
             scene = self._get_default_scene_for_room(room)
-            self.log(f"Loading default scene for {room}: {scene}")
+            self.info_log(f"Loading default scene for {room}: {scene}")
             if scene is None:
                 continue
             # Passing a None transition fails, and I suspect a transition of 0
