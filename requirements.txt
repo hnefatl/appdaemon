@@ -3,7 +3,6 @@
 #
 #   python -m pip install -r .\dev-requirements.txt
 
-imapclient==3.0.1
 phue==1.1
 typing-extensions==4.12
 # https://osv.dev/vulnerability/PYSEC-2023-74 but forced by appdaemon version...
