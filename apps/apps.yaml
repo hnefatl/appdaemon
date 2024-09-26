@@ -13,6 +13,7 @@ default_scene_service:
 lights:
   module: lights
   class: Lights
+  log_level: WARNING
 
 remotes:
   module: remotes

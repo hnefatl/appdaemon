@@ -88,9 +88,9 @@ class WakeupInfo(typed_hass.Hass):
         result: str
         if use_mock_data:
             result = MOCK_DATA
-            self.log("using mock data")
+            self.info_log("using mock data")
         else:
-            self.log("Fetching weather")
+            self.info_log("Fetching weather")
             response = requests.post(
                 url="https://api.tomorrow.io/v4/timelines",
                 params={"apikey": self.args.get("api_key")},
@@ -113,7 +113,7 @@ class WakeupInfo(typed_hass.Hass):
                     "endTime": "nowPlus1d",
                 },
             )
-            self.log("Fetched weather")
+            self.info_log("Fetched weather")
             if response.status_code != 200:
                 raise RuntimeError(f"{response.status_code}: {response.text}")
             result = response.text
@@ -141,7 +141,7 @@ class WakeupInfo(typed_hass.Hass):
         yesterday_mean_temp = mean(
             forecast.temperatures(hours=range(9, 18), day_delta=-1)
         )
-        self.log(
+        self.info_log(
             f"today mean temp: {today_mean_temp}, yesterday mean temp: {yesterday_mean_temp}"
         )
         if today_mean_temp <= yesterday_mean_temp - 2:

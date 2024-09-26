@@ -20,7 +20,7 @@ class Hass(hass.Hass):
 
     def __init__(self, *args: Any, **kwargs: Any):
         self.args: dict[str, str]
-        return super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def get_state(
         self,
@@ -43,7 +43,7 @@ class Hass(hass.Hass):
             kwargs["new"] = new
         if duration is not None:
             kwargs["duration"] = duration.seconds
-        
+
         super().listen_state(
             callback=callback,
             entity_id=str(entity_id),
@@ -62,7 +62,7 @@ class Hass(hass.Hass):
         service: str,
         entity_id: Optional[EntityId] = None,
         data: Optional[dict[str, Any]] = None,
-        **kwargs: Any
+        **kwargs: Any,
     ):
         if entity_id is not None:
             kwargs["entity_id"] = str(entity_id)
@@ -70,11 +70,20 @@ class Hass(hass.Hass):
             kwargs["data"] = data
         super().call_service(service=service, **kwargs)
 
-    def log(self, message: str, **kwargs: Any):
-        super().log(message, **kwargs)
+    def log(self, message: str, level: str):
+        super().log(message, level=level)
+
+    def info_log(self, message: str):
+        super().log(message, level="INFO")
+
+    def warning_log(self, message: str):
+        super().log(message, level="WARNING")
+
+    def error_log(self, message: str):
+        super().log(message, level="ERROR")
 
     def tts_speak(self, message: str, media_player: EntityId):
-        self.log(f"speaking: '{message}'")
+        self.info_log(f"speaking: '{message}'")
         self.call_service(
             service="tts/speak",
             entity_id=EntityId("tts.piper"),

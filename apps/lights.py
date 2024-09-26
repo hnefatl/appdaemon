@@ -17,9 +17,6 @@ P = ParamSpec("P")
 # reason, but an upper-bounded typevar does.
 RoomVar = TypeVar("RoomVar", bound="Room")
 
-# Whether to print "verbose" log lines, intended to be debug logs for logic that doesn't cause state to change.
-_VERBOSE_LOG = False
-
 
 class ActivitySensor:
     def __init__(
@@ -196,18 +193,11 @@ class Room(abc.ABC):
         @wraps(f)
         def inner(self: RoomVar, *args: P.args, **kwargs: P.kwargs):
             if self.manual_control_enabled():
-                self._log(f"Manual control enabled in {self._name}, no action")
+                self._hass.info_log(f"Manual control enabled in {self._name}, no action")
                 return
             f(self, *args, **kwargs)
 
         return inner
-
-    def _log(self, msg: str):
-        self._hass.log(msg)
-
-    def _verbose_log(self, msg: str):
-        if _VERBOSE_LOG:
-            self._hass.log(msg)
 
     @skip_if_manual_control_enabled
     def on_room_motion(self, entity_id: str, *_: Any):
@@ -215,7 +205,7 @@ class Room(abc.ABC):
 
         inactive_required_sensors = self._get_inactive_required_sensors()
         if inactive_required_sensors:
-            self._verbose_log(
+            self._hass.info_log(
                 f"motion in {self._name} from {entity_id} but required sensors aren't active: {inactive_required_sensors}"
             )
             return
@@ -223,14 +213,14 @@ class Room(abc.ABC):
         # Only load the scene if the lights are off: if the lights are already
         # on, leave them as they are.
         if lights_off or not self._lights_on:
-            self._log(f"motion in {self._name} from {entity_id}, turning on lights")
+            self._hass.info_log(f"motion in {self._name} from {entity_id}, turning on lights")
             if not self._lights_on:
-                self._verbose_log(
+                self._hass.warning_log(
                     "edge case: lights were on in HA but off in the model."
                 )
             self._turn_on_lights()
         else:
-            self._verbose_log(
+            self._hass.info_log(
                 f"motion in {self._name} from {entity_id} but lights already on"
             )
 
@@ -238,12 +228,12 @@ class Room(abc.ABC):
     def on_room_no_motion(self, *_: Any):
         active_devices = self._get_active_sensors()
         if active_devices:
-            self._verbose_log(
+            self._hass.info_log(
                 f"no motion in {self._name}, but devices are active: {active_devices}"
             )
             return
 
-        self._log(
+        self._hass.info_log(
             f"no motion in {self._name} for {self._no_motion_timeout}, no devices are active, lights off"
         )
         self._turn_off_lights()
@@ -252,7 +242,7 @@ class Room(abc.ABC):
     def on_activity_sensor_change(self, entity: str, *_: Any):
         active_devices = self._get_active_sensors()
         if active_devices:
-            self._log(f"active devices remaining: {active_devices}")
+            self._hass.info_log(f"active devices remaining: {active_devices}")
             return
 
         # Don't turn the lights off if a device is turned off and there hasn't
@@ -262,14 +252,14 @@ class Room(abc.ABC):
             now - last_motion for last_motion in self._last_motions.values()
         )
         if time_since_last_motion > self._no_motion_timeout:
-            self._log(
+            self._hass.info_log(
                 f"no active devices, last was {entity}, last motion was "
                 f"{time_since_last_motion.seconds} ago vs timeout of "
                 f"{self._no_motion_timeout.seconds}, lights off"
             )
             self._turn_off_lights()
         else:
-            self._verbose_log(
+            self._hass.info_log(
                 f"no active devices, last was {entity}, last motion was "
                 f"{time_since_last_motion.seconds} ago vs timeout of "
                 f"{self._no_motion_timeout.seconds}, so room occupied"
