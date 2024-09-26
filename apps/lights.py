@@ -141,7 +141,7 @@ class Room(abc.ABC):
         # where movement while the light is turning off off prevents the lights
         # from coming back on, until movement stops being detected and is
         # subsequently detected again.
-        self._lights_on = self._are_lights_off()
+        self._lights_on = not self._are_lights_off()
 
     def initialise(self, hass: typed_hass.Hass):
         for motion_sensor in self._motion_sensors:
