@@ -1,7 +1,6 @@
 from typing import Any
 
-from datetime import datetime, timedelta
-from dateutil.tz import tzlocal
+from whenever import SystemDateTime, TimeDelta
 
 import typed_hass
 from typed_hass import EntityId
@@ -16,17 +15,17 @@ SHOWER_ACTIVE = EntityId("input_boolean.shower_active")
 class WeightReminder(typed_hass.Hass):
     def initialize(self):
         # Last activation. Default to as old as possible.
-        self._last_shower_on = datetime.fromtimestamp(0, tzlocal())
-        self._last_reminder = datetime.fromtimestamp(0, tzlocal())
+        self._last_shower_on = SystemDateTime.from_timestamp(0)
+        self._last_reminder = SystemDateTime.from_timestamp(0)
 
         for bedroom_sensor in BEDROOM_SENSORS:
             self.listen_state(callback=self.bedroom_motion, entity_id=bedroom_sensor)
         self.listen_state(callback=self.shower_on, entity_id=SHOWER_ACTIVE)
 
     def bedroom_motion(self, *_: Any):
-        now = datetime.now(tz=tzlocal())
+        now = SystemDateTime.now()
 
-        recent_after_shower = now < self._last_shower_on + timedelta(minutes=60)
+        recent_after_shower = now < self._last_shower_on + TimeDelta(minutes=60)
         havent_reminded_today = self._last_reminder.date() < now.date()
         if recent_after_shower and havent_reminded_today:
             self._last_reminder = now
@@ -36,4 +35,4 @@ class WeightReminder(typed_hass.Hass):
             )
 
     def shower_on(self, *_: Any):
-        self._last_shower_on = datetime.now()
+        self._last_shower_on = SystemDateTime.now()
