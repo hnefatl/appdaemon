@@ -15,7 +15,7 @@ SHOWER_ACTIVE = InputBoolean("shower_active")
 class WeightReminder(typed_hass.Hass):
     def initialize(self):
         # Last activation. Default to as old as possible.
-        self._last_shower_on = SystemDateTime.from_timestamp(0)
+        self._last_shower_on: SystemDateTime | None = None
         self._last_reminder = SystemDateTime.from_timestamp(0)
 
         for bedroom_sensor in BEDROOM_SENSORS:
@@ -23,8 +23,12 @@ class WeightReminder(typed_hass.Hass):
         self.listen_state(callback=self.shower_on, entity_id=SHOWER_ACTIVE)
 
     def bedroom_motion(self, *_: Any):
-        now = SystemDateTime.now()
+        # If shower hasn't been used since initialisation (e.g. I'm tinkering with appdaemon),
+        # then don't trigger spuriously.
+        if self._last_shower_on is None:
+            return
 
+        now = SystemDateTime.now()
         recent_after_shower = now < self._last_shower_on + TimeDelta(minutes=60)
         havent_reminded_today = self._last_reminder.date() < now.date()
         if recent_after_shower and havent_reminded_today:
