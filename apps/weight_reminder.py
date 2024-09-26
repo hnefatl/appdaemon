@@ -3,13 +3,13 @@ from typing import Any
 from whenever import SystemDateTime, TimeDelta
 
 import typed_hass
-from typed_hass import EntityId
+from typed_hass import MediaPlayer, InputBoolean, BinarySensor
 
 BEDROOM_SENSORS = [
-    EntityId("binary_sensor.bedroom_motion_occupancy"),
-    EntityId("binary_sensor.bedroom_entrance_motion_occupancy"),
+    BinarySensor("bedroom_motion_occupancy"),
+    BinarySensor("bedroom_entrance_motion_occupancy"),
 ]
-SHOWER_ACTIVE = EntityId("input_boolean.shower_active")
+SHOWER_ACTIVE = InputBoolean("shower_active")
 
 
 class WeightReminder(typed_hass.Hass):
@@ -31,7 +31,7 @@ class WeightReminder(typed_hass.Hass):
             self._last_reminder = now
             self.tts_speak(
                 message="Weigh yourself.",
-                media_player=EntityId("media_player.bedroom_speaker"),
+                media_player=MediaPlayer("bedroom_speaker"),
             )
 
     def shower_on(self, *_: Any):

@@ -8,6 +8,27 @@ import datetime
 import appdaemon.plugins.hass.hassapi as hass  # pyright: ignore[reportMissingTypeStubs]
 
 EntityId = NewType("EntityId", str)
+
+
+def make_typed_entity_id(prefix: str) -> Callable[[str], EntityId]:
+    def inner(s: str):
+        if "." in s:
+            raise ValueError("Argument contains a prefix.")
+        return EntityId(f"{prefix}.{s}")
+
+    return inner
+
+
+# Vaguely checked alternatives to `EntityId("input_boolean.foo")`.
+InputBoolean = make_typed_entity_id("input_boolean")
+Switch = make_typed_entity_id("switch")
+Sensor = make_typed_entity_id("sensor")
+Group = make_typed_entity_id("group")
+BinarySensor = make_typed_entity_id("binary_sensor")
+MediaPlayer = make_typed_entity_id("media_player")
+TTS = make_typed_entity_id("tts")
+
+
 # https://appdaemon.readthedocs.io/en/latest/APPGUIDE.html#state-callbacks
 StateCallback = Callable[[EntityId, str, Optional[str], str, dict[str, Any]], None]
 # https://appdaemon.readthedocs.io/en/latest/APPGUIDE.html#about-event-callbacks
@@ -86,7 +107,7 @@ class Hass(hass.Hass):
         self.info_log(f"speaking: '{message}'")
         self.call_service(
             service="tts/speak",
-            entity_id=EntityId("tts.piper"),
+            entity_id=TTS("piper"),
             cache=False,
             media_player_entity_id=str(media_player),
             message=message,

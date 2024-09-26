@@ -152,5 +152,5 @@ class WakeupInfo(typed_hass.Hass):
         if messages:
             self.tts_speak(
                 "\n".join(messages),
-                media_player=typed_hass.EntityId("media_player.bedroom_speaker"),
+                media_player=typed_hass.MediaPlayer("bedroom_speaker"),
             )

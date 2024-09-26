@@ -9,7 +9,15 @@ from typing_extensions import override
 from functools import wraps
 
 import typed_hass
-from typed_hass import EntityId
+from typed_hass import (
+    EntityId,
+    Group,
+    InputBoolean,
+    BinarySensor,
+    Switch,
+    Sensor,
+    MediaPlayer,
+)
 
 P = ParamSpec("P")
 # Annoyingly necessary because decorators can't easily be defined inside classes,
@@ -112,13 +120,13 @@ class Room(abc.ABC):
         self._lights_only_if = lights_only_if or []
         # `input_boolean` for toggling automatic/manual control.
         self._manual_control_input_boolean = (
-            EntityId(f"input_boolean.{name}_manual_control")
+            InputBoolean(f"{name}_manual_control")
             if has_manual_control_toggle
             else None
         )
 
         if motion_sensors is None:
-            motion_sensors = {EntityId(f"binary_sensor.{name}_motion_occupancy")}
+            motion_sensors = {BinarySensor(f"{name}_motion_occupancy")}
         # Entities indicating motion within the room.
         self._motion_sensors = motion_sensors
         # The last time there was motion in the room. Homeassistant "are lights
@@ -193,15 +201,17 @@ class Room(abc.ABC):
         @wraps(f)
         def inner(self: RoomVar, *args: P.args, **kwargs: P.kwargs):
             if self.manual_control_enabled():
-                self._hass.info_log(f"Manual control enabled in {self._name}, no action")
+                self._hass.info_log(
+                    f"Manual control enabled in {self._name}, no action"
+                )
                 return
             f(self, *args, **kwargs)
 
         return inner
 
     @skip_if_manual_control_enabled
-    def on_room_motion(self, entity_id: str, *_: Any):
-        self._last_motions[EntityId(entity_id)] = datetime.datetime.now()
+    def on_room_motion(self, entity_id: EntityId, *_: Any):
+        self._last_motions[entity_id] = datetime.datetime.now()
 
         inactive_required_sensors = self._get_inactive_required_sensors()
         if inactive_required_sensors:
@@ -213,7 +223,9 @@ class Room(abc.ABC):
         # Only load the scene if the lights are off: if the lights are already
         # on, leave them as they are.
         if lights_off or not self._lights_on:
-            self._hass.info_log(f"motion in {self._name} from {entity_id}, turning on lights")
+            self._hass.info_log(
+                f"motion in {self._name} from {entity_id}, turning on lights"
+            )
             if not self._lights_on:
                 self._hass.warning_log(
                     "edge case: lights were on in HA but off in the model."
@@ -285,9 +297,7 @@ class LightGroupRoom(Room):
 
     @override
     def _are_lights_off(self) -> bool:
-        return (
-            self._hass.get_state(EntityId(f"group.{self._area_name}_lights")) == "off"
-        )
+        return self._hass.get_state(Group(f"{self._area_name}_lights")) == "off"
 
 
 class SwitchLightRoom(Room):
@@ -323,31 +333,27 @@ class Lights(typed_hass.Hass):
                 name="living_room",
                 no_motion_timeout=datetime.timedelta(minutes=15),
                 motion_sensors={
-                    EntityId("binary_sensor.living_room_motion_occupancy"),
-                    EntityId("binary_sensor.reading_chair_motion_occupancy"),
+                    BinarySensor("living_room_motion_occupancy"),
+                    BinarySensor("reading_chair_motion_occupancy"),
                 },
                 activity_sensors=[
-                    ActivitySensor.isnt_off(EntityId("media_player.shield")),
-                    ActivitySensor.isnt_off(
-                        EntityId("binary_sensor.ping_nintendo_switch")
-                    ),
-                    ActivitySensor.isnt_off(
-                        EntityId("media_player.living_room_speaker")
-                    ),
-                    ActivitySensor.is_on(EntityId("switch.pc")),
+                    ActivitySensor.isnt_off(MediaPlayer("shield")),
+                    ActivitySensor.isnt_off(BinarySensor("ping_nintendo_switch")),
+                    ActivitySensor.isnt_off(MediaPlayer("living_room_speaker")),
+                    ActivitySensor.is_on(Switch("pc")),
                 ],
             ),
             SwitchLightRoom(
                 hass=self,
                 name="bathroom",
-                switch_name=EntityId("switch.bathroom_light_and_fan"),
+                switch_name=Switch("bathroom_light_and_fan"),
                 no_motion_timeout=datetime.timedelta(minutes=2),
                 activity_sensors=[
-                    ActivitySensor.is_on(EntityId("input_boolean.shower_active")),
+                    ActivitySensor.is_on(InputBoolean("shower_active")),
                     # Can't turn off the lights because they're also the extractor fan :(
                     ActivitySensor.compared_to(
-                        EntityId("sensor.bathroom_humidity"),
-                        EntityId("sensor.office_humidity"),
+                        Sensor("bathroom_humidity"),
+                        Sensor("office_humidity"),
                         # Wait until bathroom is close to the ambient humidity
                         # as measured in office. Hardcoded thresholds don't
                         # work well with the highly variable humidity here.
@@ -360,13 +366,11 @@ class Lights(typed_hass.Hass):
                 hass=self,
                 name="bedroom",
                 motion_sensors={
-                    EntityId("binary_sensor.bedroom_motion_occupancy"),
-                    EntityId("binary_sensor.bedroom_entrance_motion_occupancy"),
+                    BinarySensor("bedroom_motion_occupancy"),
+                    BinarySensor("bedroom_entrance_motion_occupancy"),
                 },
                 no_motion_timeout=datetime.timedelta(minutes=1),
-                lights_only_if=[
-                    ActivitySensor.is_on(EntityId("input_boolean.keith_awake"))
-                ],
+                lights_only_if=[ActivitySensor.is_on(InputBoolean("keith_awake"))],
                 has_manual_control_toggle=True,
             ),
             LightGroupRoom(
