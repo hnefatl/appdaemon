@@ -1,6 +1,7 @@
 # On Windows, install by opening a powershell terminal from vscode (pointing to
 # remote filesystem) then run
 #
+#   .\windows-venv\Scripts\activate
 #   python -m pip install -r .\dev-requirements.txt
 
 phue~=1.1
