@@ -1,2 +1,3 @@
-appdaemon==4.4.2
+# Ugly bump to get to a version with python 3.12 for my sanity
+appdaemon @ git+https://github.com/acockburn/appdaemon@ed23d8dc7ddc4460be87451090bed18a1053d0b2
 -r requirements.txt
