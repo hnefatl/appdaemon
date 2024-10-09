@@ -118,3 +118,6 @@ class Hass(hass.Hass):
         self.call_service(
             service="homeassistant/turn_on", entity_id=entity_id, **kwargs
         )
+    
+    def run_in(self, callback: Callable[[], None], after_seconds: float) -> str:
+        return super().run_in(callback=callback, delay=after_seconds)

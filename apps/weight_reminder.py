@@ -12,6 +12,10 @@ BEDROOM_SENSORS = [
 SHOWER_ACTIVE = InputBoolean("shower_active")
 
 
+def _next_morning(d: SystemDateTime) -> SystemDateTime:
+    return SystemDateTime(year=d.year, month=d.month, day=d.day + 1, hour=5)
+
+
 class WeightReminder(typed_hass.Hass):
     def initialize(self):
         # Last activation. Default to as old as possible.
@@ -30,12 +34,15 @@ class WeightReminder(typed_hass.Hass):
 
         now = SystemDateTime.now()
         recent_after_shower = now < self._last_shower_on + TimeDelta(minutes=60)
-        havent_reminded_today = self._last_reminder.date() < now.date()
+        havent_reminded_today = now >= _next_morning(self._last_reminder)
         if recent_after_shower and havent_reminded_today:
             self._last_reminder = now
-            self.tts_speak(
-                message="Weigh yourself.",
-                media_player=MediaPlayer("bedroom_speaker"),
+            self.run_in(
+                after_seconds=15,
+                callback=lambda: self.tts_speak(
+                    message="Weigh yourself.",
+                    media_player=MediaPlayer("bedroom_speaker"),
+                ),
             )
 
     def shower_on(self, *_: Any):
