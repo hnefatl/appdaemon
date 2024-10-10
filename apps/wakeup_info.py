@@ -92,7 +92,7 @@ class Forecast:
 class WakeupInfo(typed_hass.Hass):
     async def initialize(self):
         self.listen_event(event="ANNOUNCE_WEATHER", callback=self.on_event)
-        await self.on_event("", {"mock": True, "print_raw_data": True}, {})
+        # await self.on_event("", {"mock": True, "print_raw_data": True}, {})
 
     async def on_event(
         self, _event_name: str, data: dict[str, Any], _user_args: dict[str, Any]
@@ -135,7 +135,6 @@ class WakeupInfo(typed_hass.Hass):
         forecast = Forecast(result)
         if print_raw_data:
             print(result)
-            print(forecast)
 
         messages = list[str]()
 
