@@ -35,6 +35,8 @@ StateCallback = Callable[[EntityId, str, Optional[str], str, dict[str, Any]], No
 # https://appdaemon.readthedocs.io/en/latest/APPGUIDE.html#about-event-callbacks
 # Args are event name, event arguments, user-provided arguments at the callsite.
 EventCallback = Callable[[str, dict[str, Any], dict[str, Any]], None]
+# https://appdaemon.readthedocs.io/en/latest/APPGUIDE.html#about-schedule-callbacks
+SchedulerCallback = Callable[[dict[str, Any]], None]
 
 
 class Hass(hass.Hass):
@@ -119,5 +121,5 @@ class Hass(hass.Hass):
             service="homeassistant/turn_on", entity_id=entity_id, **kwargs
         )
     
-    def run_in(self, callback: Callable[[], None], after_seconds: float) -> str:
+    def run_in(self, callback: SchedulerCallback, after_seconds: float) -> str:
         return super().run_in(callback=callback, delay=after_seconds)

@@ -26,6 +26,9 @@ class WeightReminder(typed_hass.Hass):
             self.listen_state(callback=self.bedroom_motion, entity_id=bedroom_sensor)
         self.listen_state(callback=self.shower_on, entity_id=SHOWER_ACTIVE)
 
+    def shower_on(self, *_: Any):
+        self._last_shower_on = SystemDateTime.now()
+
     def bedroom_motion(self, *_: Any):
         # If shower hasn't been used since initialisation (e.g. I'm tinkering with appdaemon),
         # then don't trigger spuriously.
@@ -37,13 +40,11 @@ class WeightReminder(typed_hass.Hass):
         havent_reminded_today = now >= _next_morning(self._last_reminder)
         if recent_after_shower and havent_reminded_today:
             self._last_reminder = now
+            self.info_log("Weight reminder triggered")
             self.run_in(
                 after_seconds=15,
-                callback=lambda: self.tts_speak(
+                callback=lambda _: self.tts_speak(
                     message="Weigh yourself.",
                     media_player=MediaPlayer("bedroom_speaker"),
                 ),
             )
-
-    def shower_on(self, *_: Any):
-        self._last_shower_on = SystemDateTime.now()
