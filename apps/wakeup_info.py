@@ -90,11 +90,11 @@ class Forecast:
 
 
 class WakeupInfo(typed_hass.Hass):
-    async def initialize(self):
+    def initialize(self):
         self.listen_event(event="ANNOUNCE_WEATHER", callback=self.on_event)
         # await self.on_event("", {"mock": True, "print_raw_data": True}, {})
 
-    async def on_event(
+    def on_event(
         self, _event_name: str, data: dict[str, Any], _user_args: dict[str, Any]
     ):
         use_mock_data = data.get("mock", False)
