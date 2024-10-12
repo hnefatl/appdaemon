@@ -347,7 +347,7 @@ class Lights(typed_hass.Hass):
                 hass=self,
                 name="bathroom",
                 switch_name=Switch("bathroom_light_and_fan"),
-                no_motion_timeout=datetime.timedelta(minutes=2),
+                no_motion_timeout=datetime.timedelta(minutes=5),
                 activity_sensors=[
                     ActivitySensor.is_on(InputBoolean("shower_active")),
                     # Can't turn off the lights because they're also the extractor fan :(
