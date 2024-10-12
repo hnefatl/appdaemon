@@ -357,8 +357,8 @@ class Lights(typed_hass.Hass):
                         # Wait until bathroom is close to the ambient humidity
                         # as measured in office. Hardcoded thresholds don't
                         # work well with the highly variable humidity here.
-                        lambda b, o: float(b) > float(o) + 5,
-                        descriptor="bathroom humidity > office humidity + 5",
+                        lambda b, o: float(b) > min(60, float(o) + 5),
+                        descriptor="bathroom humidity > min(60, office humidity + 5)",
                     ),
                 ],
             ),
