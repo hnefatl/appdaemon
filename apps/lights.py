@@ -333,7 +333,7 @@ class Lights(typed_hass.Hass):
                 no_motion_timeout=datetime.timedelta(minutes=15),
                 motion_sensors={
                     BinarySensor("living_room_motion_occupancy"),
-                    BinarySensor("reading_chair_motion_occupancy"),
+                    BinarySensor("pc_motion_occupancy"),
                 },
                 activity_sensors=[
                     ActivitySensor.isnt_off(MediaPlayer("shield")),
