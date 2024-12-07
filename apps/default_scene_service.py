@@ -94,6 +94,10 @@ class DefaultSceneService(typed_hass.Hass):
         if room is Room.BEDROOM and not keith_awake:
             return Scene("bedroom_dim")
 
+        # Special override for skipping the fancy lights and always being ~bright.
+        if self._get_boolean_state(InputBoolean("bright_lights")):
+            return Scene(f"{room.name.lower()}_bright")
+
         if room is Room.LIVING_ROOM:
             return get_day_stable_random_uniform(
                 room.value,
