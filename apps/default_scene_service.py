@@ -81,7 +81,7 @@ class DefaultSceneService(typed_hass.Hass):
 
         # Special-case lighting for the corridor when the 3d-printer is active,
         # so I can check up on it more easily.
-        if room is Room.CORRIDOR and self._get_boolean_state(
+        if room is Room.LIVING_ROOM and self._get_boolean_state(
             BinarySensor("octoprint_printing")
         ):
             return Scene(f"{room.name.lower()}_bright")
