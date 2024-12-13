@@ -2,6 +2,8 @@
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 
+import copy
+import dataclasses
 from typing import Any, Callable, Dict
 
 import appdaemon.plugins.hass.hassapi as hass  # pyright: ignore[reportMissingTypeStubs]
@@ -9,31 +11,44 @@ import appdaemon.plugins.hass.hassapi as hass  # pyright: ignore[reportMissingTy
 import zha_buttons
 import default_scene_service
 
+@dataclasses.dataclass
+class Scene:
+    entity_id: str
+    color_name: str | None = None
+    brightness_pct: float | None = None
+
+    def to_turn_on_args(self) -> dict[str, Any]:
+        return dataclasses.asdict(self)
 
 # "scenes", but really just arguments to turn_on
-_MANUAL_MODE_SCENES = [
-    {
-        "entity_id": "group.bedroom_lights",
-        "color_name": "red",
-        "brightness_pct": 80,
-    },
-    {
-        "entity_id": "group.bedroom_lights",
-        "color_name": "green",
-        "brightness_pct": 80,
-    },
-    {
-        "entity_id": "group.bedroom_lights",
-        "color_name": "blue",
-        "brightness_pct": 80,
-    },
-    {
-        "entity_id": "group.bedroom_lights",
-        "color_name": "purple",
-        "brightness_pct": 80,
-    },
-    {"entity_id": "scene.bedroom_arctic_aurora"},
-]
+_MANUAL_MODE_SCENES = (
+    Scene(
+        entity_id="group.bedroom_lights",
+        color_name="orange",
+        brightness_pct=40,
+    ),
+    Scene(
+        entity_id="group.bedroom_lights",
+        color_name="red",
+        brightness_pct=80,
+    ),
+    Scene(
+        entity_id="group.bedroom_lights",
+        color_name="green",
+        brightness_pct=80,
+    ),
+    Scene(
+        entity_id="group.bedroom_lights",
+        color_name="blue",
+        brightness_pct=80,
+    ),
+    Scene(
+        entity_id="group.bedroom_lights",
+        color_name="purple",
+        brightness_pct=80,
+    ),
+    Scene(entity_id="scene.bedroom_arctic_aurora"),
+)
 
 
 class Remotes(hass.Hass):
@@ -41,6 +56,7 @@ class Remotes(hass.Hass):
     def __init__(self, *args: ..., **kwargs: ...):
         super().__init__(*args, **kwargs)
         self._manual_mode_scene_iterator = 0
+        self._scene: Scene | None = None
 
         self._behaviours: dict[
             str, Callable[[zha_buttons.Button, str, zha_buttons.ButtonPress], None]
@@ -68,29 +84,27 @@ class Remotes(hass.Hass):
         press: zha_buttons.ButtonPress,
     ):
         bedroom_manual_control = self.get_entity("input_boolean.bedroom_manual_control")
+        is_manual_control = bedroom_manual_control.get_state() == "on"
 
         if button == "centre" and press is zha_buttons.ButtonPress.SINGLE:
-            is_manual_control = bedroom_manual_control.get_state() == "on"
             bedroom_manual_control.toggle()
-            # This is awkward but toggling then fetching the state actually races, despite being synchronous
-            # calls (we get "off" immediately after toggling on).
             is_manual_control = not is_manual_control
-            self._manual_mode_scene_iterator = 0
 
             self.log(f"manual lights set to: {is_manual_control}")
-            if is_manual_control:
-                self.turn_on(**_MANUAL_MODE_SCENES[0])
-            else:
+            if not is_manual_control:
+                self._scene = None
                 self.fire_event(
                     event=default_scene_service.EVENT_NAME,
                     rooms=["bedroom"],
                 )
-            return
+                return
 
-        is_manual_control = bedroom_manual_control.get_state() == "on"
         if not is_manual_control:
-            self.log("no action, not manual control")
+            self.log("manual control disabled, ignoring")
             return
+        if self._scene is None:
+            self._manual_mode_scene_iterator = 0
+            self._scene = copy.deepcopy(_MANUAL_MODE_SCENES[self._manual_mode_scene_iterator])
 
         if button in {"left", "right"}:
             if button == "right":
@@ -99,9 +113,13 @@ class Remotes(hass.Hass):
                 self._manual_mode_scene_iterator -= 1
 
             self._manual_mode_scene_iterator %= len(_MANUAL_MODE_SCENES)
-            scene = _MANUAL_MODE_SCENES[self._manual_mode_scene_iterator]
-            self.log(f"manual lights to: {scene}")
-            self.turn_on(**scene)
-        elif button in {"top", "bottom"}:
-            pass
-            # TODO: figure out how to wire in brightness, probably via more structured scene definitions
+            self._scene = copy.deepcopy(_MANUAL_MODE_SCENES[self._manual_mode_scene_iterator])
+
+        if button in {"top", "bottom"}:
+            if button == "top":
+                self._scene.brightness_pct = min(self._scene.brightness_pct + 20, 100)
+            elif button == "bottom":
+                self._scene.brightness_pct = max(self._scene.brightness_pct - 20, 0)
+
+        self.log(f"manual scene to: {self._scene}")
+        self.turn_on(**self._scene.to_turn_on_args())
