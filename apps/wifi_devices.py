@@ -8,8 +8,7 @@ import json
 import pathlib
 import threading
 
-REMEMBER_ACTION_NAME = "WIFI_DEVICE_REMEMBER"
-SET_NAME_ACTION_NAME = "WIFI_DEVICE_SET_NAME"
+ACTION_NAME = "WIFI_DEVICE_REMEMBER"
 INTERNAL_IP_REGEX = re.compile(r"^(10|192\.168|172)\..*")
 # This resolves to a path outside the docker container, on the host filesystem.
 REGISTRY_PATH = pathlib.Path("/conf/wifi_device_registry.json")
@@ -59,13 +58,13 @@ class DeviceTracker(Serialisable):
 
 @dataclasses.dataclass(frozen=True)
 class DeviceRegistry(Serialisable):
-    macs: dict[Mac, FriendlyName | None]
-    unknown_entities: dict[typed_hass.EntityId, FriendlyName | None]
+    macs: dict[Mac, FriendlyName]
+    unknown_entities: dict[typed_hass.EntityId, FriendlyName]
 
     def contains(self, tracker: DeviceTracker) -> bool:
         return tracker.mac() in self.macs or tracker.entity_id in self.unknown_entities
 
-    def add(self, tracker: DeviceTracker, friendly_name: FriendlyName | None):
+    def add(self, tracker: DeviceTracker, friendly_name: FriendlyName):
         if (mac := tracker.mac()) is not None:
             self.macs[mac] = friendly_name
             # If a previously unknown device has gained a mac, remove the old record to
@@ -104,10 +103,7 @@ class WifiDevices(typed_hass.Hass):
                 )
 
         self.listen_notify_phone_action(
-            callback=self.on_remember_device, action_name=REMEMBER_ACTION_NAME
-        )
-        self.listen_notify_phone_action(
-            callback=self.on_remember_device, action_name=SET_NAME_ACTION_NAME
+            callback=self.on_remember_device, action_name=ACTION_NAME
         )
         self.run_every(callback=self.update, start="now", interval_s=60)
 
@@ -160,12 +156,8 @@ class WifiDevices(typed_hass.Hass):
                 data={"tracker_data": tracker.serialise()},
                 actions=[
                     typed_hass.NotifyAction(
-                        title="Remember",
-                        action=REMEMBER_ACTION_NAME,
-                    ),
-                    typed_hass.NotifyAction(
                         title="Name",
-                        action=SET_NAME_ACTION_NAME,
+                        action=ACTION_NAME,
                         behavior="textInput",
                     ),
                 ],
@@ -173,10 +165,12 @@ class WifiDevices(typed_hass.Hass):
 
     def on_remember_device(self, _, event_params, __):
         if (tracker_data := event_params.get("tracker_data")) is None:
-            self.error_log("Missed field `tracker_data` in event")
-        friendly_name: str | None = event_params.get("reply_text")
-        if friendly_name is not None:
-            friendly_name = FriendlyName(friendly_name.strip())
+            self.error_log("Missing field `tracker_data` in event")
+            return
+        if (friendly_name := event_params.get("reply_text")) is None:
+            self.error_log("Missing field `reply_text` in event")
+            return
+        friendly_name = FriendlyName(friendly_name.strip())
 
         tracker = DeviceTracker.deserialise(tracker_data)
         self.info_log(f"Remembering {tracker} as {friendly_name}")
