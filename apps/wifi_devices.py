@@ -10,7 +10,6 @@ import threading
 
 REMEMBER_ACTION_NAME = "WIFI_DEVICE_REMEMBER"
 SET_NAME_ACTION_NAME = "WIFI_DEVICE_SET_NAME"
-MAC_REGEX = re.compile(r"^device_tracker\.([0-9a-fA-F]{2}_){5}[0-9a-fA-F]{2}$")
 INTERNAL_IP_REGEX = re.compile(r"^(10|192\.168|172)\..*")
 # This resolves to a path outside the docker container, on the host filesystem.
 REGISTRY_PATH = pathlib.Path("/conf/wifi_device_registry.json")
@@ -22,7 +21,7 @@ FriendlyName = NewType("FriendlyName", str)
 @dataclasses.dataclass(frozen=True)
 class Serialisable(abc.ABC):
     def serialise(self) -> str:
-        return json.dumps(dataclasses.asdict(self))
+        return json.dumps(dataclasses.asdict(self), indent=2)
 
     @classmethod
     def deserialise(cls, s: str) -> Self:
@@ -36,12 +35,12 @@ class DeviceTracker(Serialisable):
 
     def is_wifi_device(self) -> bool:
         return (
-            MAC_REGEX.match(self.entity_id) is not None
+            self._attributes().get("source_type") == "router"
             and INTERNAL_IP_REGEX.match(self.ip() or "") is not None
         )
 
     def is_connected(self) -> bool:
-        return self._attributes().get("source_type") == "router"
+        return self.state.get("state") == "home"
 
     def _attributes(self) -> dict[str, Any]:
         return self.state.get("attributes", {})
