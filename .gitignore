@@ -8,6 +8,7 @@ compiled/
 .*venv/
 
 secrets.yaml
+wifi_device_registry.json
 
 # Maybe these should be included, not sure yet since not used.
 dashboards/

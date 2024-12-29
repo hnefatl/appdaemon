@@ -34,3 +34,7 @@ wakeup_info:
 weight_reminder:
   module: weight_reminder
   class: WeightReminder
+
+wifi_devices:
+  module: wifi_devices
+  class: WifiDevices

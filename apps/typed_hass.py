@@ -2,10 +2,12 @@
 
 # pyright: reportUnknownMemberType=false, reportUnknownVariableType=false
 
-from typing import Any, Optional, NewType, Callable
+from typing import Any, Optional, NewType, Callable, Literal
+import copy
+import dataclasses
 import datetime
 
-import appdaemon.plugins.hass.hassapi as hass  # pyright: ignore[reportMissingTypeStubs]
+import appdaemon.plugins.hass.hassapi as hass  # pyright: ignore[reportMissingTypeStubs, reportMissingImports]
 
 EntityId = NewType("EntityId", str)
 
@@ -36,7 +38,20 @@ StateCallback = Callable[[EntityId, str, Optional[str], str, dict[str, Any]], No
 # Args are event name, event arguments, user-provided arguments at the callsite.
 EventCallback = Callable[[str, dict[str, Any], dict[str, Any]], None]
 # https://appdaemon.readthedocs.io/en/latest/APPGUIDE.html#about-schedule-callbacks
+# TODO: use ParamSpecKwargs to type hint that any kwargs passed to register methods are present on the callback too.
 SchedulerCallback = Callable[[dict[str, Any]], None]
+
+
+@dataclasses.dataclass
+class NotifyAction:
+    """https://companion.home-assistant.io/docs/notifications/actionable-notifications/#building-actionable-notifications"""
+
+    # Text to show in the notification
+    title: str
+    # Event type to fire in homeassistant
+    action: str
+    # Semantics of the press.
+    behavior: Literal["textInput"] | None = None
 
 
 class Hass(hass.Hass):
@@ -120,6 +135,58 @@ class Hass(hass.Hass):
         self.call_service(
             service="homeassistant/turn_on", entity_id=entity_id, **kwargs
         )
-    
+
     def run_in(self, callback: SchedulerCallback, after_seconds: float) -> str:
         return super().run_in(callback=callback, delay=after_seconds)
+
+    def run_every(
+        self,
+        callback: SchedulerCallback,
+        start: datetime.datetime | Literal["now"],
+        interval_s: int,
+    ) -> str:
+        return super().run_every(
+            callback=callback,
+            start=start,
+            interval=interval_s,
+        )
+
+    def get_tracker_details(self) -> dict[EntityId, dict[str, Any]]:
+        return {EntityId(e): s for e, s in super().get_tracker_details().items()}
+
+    def notify_phone(
+        self,
+        message: str,
+        title: str | None,
+        data: dict[str, Any] | None = None,
+        actions: list[NotifyAction] | None = None,
+    ):
+        if data is None:
+            data = {}
+        else:
+            data = copy.deepcopy(data)
+
+        if actions is not None:
+            data["actions"] = [dataclasses.asdict(a) for a in actions]
+
+        try:
+            super().notify(
+                name="mobile_app_keith_phone",
+                message=message,
+                title=title,
+                data=data,
+            )
+        except TypeError:
+            # Appdaemon has a bug where it tries to await `None` here, crashing.
+            pass
+
+    def listen_notify_phone_action(
+        self,
+        callback: EventCallback,
+        action_name: str,
+    ):
+        def c(event_name: str, event_args: dict[str, Any], user_args: dict[str, Any]):
+            if event_args.get("action") == action_name:
+                callback(event_name, event_args, user_args)
+
+        self.listen_event(callback=c, event="mobile_app_notification_action")
