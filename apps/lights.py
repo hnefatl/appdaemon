@@ -341,6 +341,7 @@ class Lights(typed_hass.Hass):
                     ActivitySensor.isnt_off(MediaPlayer("living_room_speaker")),
                     ActivitySensor.is_on(Switch("pc")),
                 ],
+                has_manual_control_toggle=True,
             ),
             SwitchLightRoom(
                 hass=self,
