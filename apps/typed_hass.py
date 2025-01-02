@@ -145,6 +145,9 @@ class Hass(hass.Hass):
         start: datetime.datetime | Literal["now"],
         interval_s: int,
     ) -> str:
+        if start == "now":
+            # Bleurgh, appdaemon doesn't handle "now+0" like it documents it does.
+            start = datetime.datetime.now() + datetime.timedelta(seconds=0.5)
         return super().run_every(
             callback=callback,
             start=start,
