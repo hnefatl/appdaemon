@@ -68,7 +68,6 @@ class DeviceTracker(Serialisable):
         ip = attributes.get("ip")
         if (
             attributes.get("source_type") != "router"
-            or state.get("state") != "home"
             or not isinstance(mac, str)
             or not isinstance(ip, str)
             or INTERNAL_IP_REGEX.match(ip) is None
