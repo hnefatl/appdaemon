@@ -1,4 +1,4 @@
-from typing import Any, NewType, Self
+from typing import Any, NewType, Self, Callable
 import abc
 import dataclasses
 import datetime
@@ -99,10 +99,11 @@ class DeviceRegistry(Serialisable):
         except:
             return None
 
-    def save(self):
+    def save(self, on_fail: Callable[[], None]):
         old = self.load()
         new = self.serialise()
         if old is not None and len(old.serialise()) > len(new):
+            on_fail()
             raise RuntimeError(
                 "Tried to reduce size of wifi device registry, probably a bug."
                 " Crashing to prevent data loss."
@@ -141,7 +142,7 @@ class WifiDevices(typed_hass.Hass):
     def terminate(self):
         try:
             with self._device_registry_lock:
-                self._device_registry.save()
+                self._device_registry.save(on_fail=self._on_save_fail)
         except Exception as e:
             # Don't fail the termination since that breaks the next automatic start.
             self.error_log(f"Failed to save on termination: {e}")
@@ -156,6 +157,10 @@ class WifiDevices(typed_hass.Hass):
         with self._device_registry_lock:
             trackers = [t for t in trackers if not self._device_registry.contains(t)]
 
+        if not trackers:
+            return
+
+        self.info_log(f"Found {len(trackers)} devices not yet annotated")
         for tracker in trackers:
             # Rate limit notifications per entity
             last_notified = self._last_notified_time.get(
@@ -208,4 +213,10 @@ class WifiDevices(typed_hass.Hass):
             self._device_registry.add(tracker, friendly_name)
             # Could batch saves but realistically they'll be entered slowly and infrequently enough
             # for it not to matter.
-            self._device_registry.save()
+            self._device_registry.save(on_fail=self._on_save_fail)
+
+    def _on_save_fail(self):
+        self.notify_phone(
+            title="Failed to save WiFi device registry",
+            message="New data is smaller than old data.",
+        )
