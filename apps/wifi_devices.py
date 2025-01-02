@@ -30,48 +30,42 @@ class Serialisable(abc.ABC):
 @dataclasses.dataclass(frozen=True)
 class DeviceTracker(Serialisable):
     entity_id: typed_hass.EntityId
-    state: dict[str, Any]
+    mac: Mac
+    ip: str
+    hostname: str | None
 
-    def is_wifi_device(self) -> bool:
-        return (
-            self._attributes().get("source_type") == "router"
-            and INTERNAL_IP_REGEX.match(self.ip() or "") is not None
+    @classmethod
+    def new(
+        cls, entity_id: typed_hass.EntityId, state: dict[str, Any]
+    ) -> "DeviceTracker | None":
+        attributes = state.get("attributes", {})
+        mac = attributes.get("mac")
+        ip = attributes.get("ip")
+        if (
+            attributes.get("source_type") != "router"
+            or state.get("state") != "home"
+            or not isinstance(mac, str)
+            or not isinstance(ip, str)
+            or INTERNAL_IP_REGEX.match(ip) is None
+        ):
+            return None
+        return DeviceTracker(
+            entity_id=entity_id,
+            mac=Mac(mac),
+            ip=ip,
+            hostname=attributes.get("hostname"),
         )
-
-    def is_connected(self) -> bool:
-        return self.state.get("state") == "home"
-
-    def _attributes(self) -> dict[str, Any]:
-        return self.state.get("attributes", {})
-
-    def ip(self) -> str | None:
-        return self._attributes().get("ip")
-
-    def mac(self) -> Mac | None:
-        if (mac := self._attributes().get("mac")) is not None:
-            return Mac(mac)
-        return None
-
-    def hostname(self) -> str | None:
-        return self._attributes().get("hostname")
 
 
 @dataclasses.dataclass(frozen=True)
 class DeviceRegistry(Serialisable):
     macs: dict[Mac, FriendlyName]
-    unknown_entities: dict[typed_hass.EntityId, FriendlyName]
 
     def contains(self, tracker: DeviceTracker) -> bool:
-        return tracker.mac() in self.macs or tracker.entity_id in self.unknown_entities
+        return tracker.mac in self.macs
 
     def add(self, tracker: DeviceTracker, friendly_name: FriendlyName):
-        if (mac := tracker.mac()) is not None:
-            self.macs[mac] = friendly_name
-            # If a previously unknown device has gained a mac, remove the old record to
-            # keep the registry clean.
-            self.unknown_entities.pop(tracker.entity_id, None)
-        else:
-            self.unknown_entities[tracker.entity_id] = friendly_name
+        self.macs[tracker.mac] = friendly_name
 
     @classmethod
     def load(cls) -> "DeviceRegistry | None":
@@ -87,7 +81,7 @@ class DeviceRegistry(Serialisable):
 class WifiDevices(typed_hass.Hass):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._device_registry = DeviceRegistry(macs={}, unknown_entities={})
+        self._device_registry = DeviceRegistry(macs={})
         self._device_registry_lock = threading.Lock()
 
         self._last_notified_time = dict[typed_hass.EntityId, datetime.datetime]()
@@ -96,7 +90,9 @@ class WifiDevices(typed_hass.Hass):
         with self._device_registry_lock:
             if (device_registry := DeviceRegistry.load()) is not None:
                 self._device_registry = device_registry
-                self.info_log(f"Loaded device registry from {REGISTRY_PATH}")
+                self.info_log(
+                    f"Loaded device registry from {REGISTRY_PATH}: {self._device_registry}"
+                )
             else:
                 self.warning_log(
                     f"Failed to load wifi device registry from {REGISTRY_PATH}"
@@ -116,16 +112,14 @@ class WifiDevices(typed_hass.Hass):
             self.error_log(f"Failed to save on termination: {e}")
 
     def update(self, _):
-        trackers = [DeviceTracker(e, s) for e, s in self.get_tracker_details().items()]
+        trackers = [
+            t
+            for e, s in self.get_tracker_details().items()
+            if (t := DeviceTracker.new(e, s)) is not None
+        ]
         # Filter to only relevant new devices
         with self._device_registry_lock:
-            trackers = [
-                t
-                for t in trackers
-                if t.is_wifi_device()
-                and t.is_connected()
-                and not self._device_registry.contains(t)
-            ]
+            trackers = [t for t in trackers if not self._device_registry.contains(t)]
 
         for tracker in trackers:
             # Rate limit notifications per entity
@@ -136,11 +130,11 @@ class WifiDevices(typed_hass.Hass):
                 continue
 
             message_lines = {
-                "Hostname": tracker.hostname(),
-                "IP": tracker.ip(),
-                "MAC": tracker.mac(),
+                "Hostname": tracker.hostname,
+                "IP": tracker.ip,
+                "MAC": tracker.mac,
             }
-            if tracker.mac() is None:
+            if tracker.mac is None:
                 # The ID is based on the MAC, so omit the full ID unless there's no better identifier
                 message_lines["Entity ID"] = tracker.entity_id
 
