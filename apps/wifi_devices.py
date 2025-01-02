@@ -159,7 +159,6 @@ class WifiDevices(typed_hass.Hass):
         if not trackers:
             return
 
-        self.info_log(f"Found {len(trackers)} devices not yet annotated")
         for tracker in trackers:
             # Rate limit notifications per entity
             last_notified = self._last_notified_time.get(
