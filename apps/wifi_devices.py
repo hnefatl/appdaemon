@@ -106,7 +106,7 @@ class DeviceRegistry(Serialisable):
             raise RuntimeError(
                 "Tried to reduce size of wifi device registry, probably a bug."
                 " Crashing to prevent data loss."
-                f"Old:\n{old}\nNew:\n{new}"
+                f"Old:\n{old}\nNew:\n{self}"
             )
         REGISTRY_PATH.write_text(new)
 
