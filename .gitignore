@@ -11,6 +11,7 @@ compiled/
 
 secrets.yaml
 wifi_device_registry.json
+oui_snapshot.json
 
 # Maybe these should be included, not sure yet since not used.
 dashboards/
