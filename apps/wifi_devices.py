@@ -75,7 +75,15 @@ class DeviceRegistry(Serialisable):
             return None
 
     def save(self):
-        REGISTRY_PATH.write_text(self.serialise())
+        old = self.load()
+        new = self.serialise()
+        if old is not None and len(old.serialise()) > len(new):
+            raise RuntimeError(
+                "Tried to reduce size of wifi device registry, probably a bug."
+                " Crashing to prevent data loss."
+                f"Old:\n{old}\nNew:\n{new}"
+            )
+        REGISTRY_PATH.write_text(new)
 
 
 class WifiDevices(typed_hass.Hass):
