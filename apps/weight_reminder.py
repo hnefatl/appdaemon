@@ -1,6 +1,6 @@
 from typing import Any
 
-from whenever import SystemDateTime, TimeDelta
+from whenever import SystemDateTime, TimeDelta, days
 
 import typed_hass
 from typed_hass import MediaPlayer, InputBoolean, BinarySensor
@@ -13,7 +13,7 @@ SHOWER_ACTIVE = InputBoolean("shower_active")
 
 
 def _next_morning(d: SystemDateTime) -> SystemDateTime:
-    return SystemDateTime(year=d.year, month=d.month, day=d.day + 1, hour=5)
+    return d.replace(hour=5) + days(1)
 
 
 class WeightReminder(typed_hass.Hass):
@@ -24,7 +24,7 @@ class WeightReminder(typed_hass.Hass):
 
         for bedroom_sensor in BEDROOM_SENSORS:
             self.listen_state(callback=self.bedroom_motion, entity_id=bedroom_sensor)
-        self.listen_state(callback=self.shower_on, entity_id=SHOWER_ACTIVE)
+        self.listen_state(callback=self.shower_on, new="on", entity_id=SHOWER_ACTIVE)
 
     def shower_on(self, *_: Any):
         self._last_shower_on = SystemDateTime.now()
