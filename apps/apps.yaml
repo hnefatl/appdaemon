@@ -15,6 +15,8 @@ lights:
   module: lights
   class: Lights
   log_level: WARNING
+  # While debugging why lights turn off despite PC being on
+  # log_level: INFO
 
 remotes:
   module: remotes

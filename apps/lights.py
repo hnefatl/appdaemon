@@ -95,6 +95,13 @@ class ActivitySensor:
             entity, lambda h, s: comparator(s, h.get_state(other)), descriptor
         )
 
+# TODO: genericise
+def if_unavailable(val: str, default: str) -> str:
+    if val == "unavailable":
+        return default
+    else:
+        return val
+
 
 class Room(abc.ABC):
     def __init__(
@@ -357,10 +364,11 @@ class Lights(typed_hass.Hass):
                         # Wait until bathroom is close to the ambient humidity
                         # as measured in office. Hardcoded thresholds don't
                         # work well with the highly variable humidity here.
-                        lambda b, o: float(b) > min(65, float(o) + 5),
+                        lambda b, o: float(if_unavailable(b, "100")) > min(65, float(if_unavailable(o, "0")) + 5),
                         descriptor="bathroom humidity > min(65, office humidity + 5)",
                     ),
                 ],
+                has_manual_control_toggle=True,
             ),
             LightGroupRoom(
                 hass=self,
