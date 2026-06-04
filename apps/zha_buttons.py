@@ -115,6 +115,7 @@ DEVICE_MAPPING: Dict[str, Button] = {
     "08a5b2fcc6bab34e04c26f24b04ba75f": IkeaDimmer("espresso_machine_switch"),
     "406a8b92e13d77d79941d59e37f03211": IkeaRemote("bedroom_remote"),
     "132631a4a3ccafe42b642066622f70ca": IkeaDimmer("bathroom_switch"),
+    "deb7fe6e053a07736142fcdd4c6b5884": IkeaDimmer("medication_switch"),
 }
 IGNORED_DEVICES = {
     "ea07540a8e0dab2abaab5c804466465a",
