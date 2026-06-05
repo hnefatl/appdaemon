@@ -108,11 +108,14 @@ class ForecastCache(dict[datetime.date, Forecast]):
                 f.write(f"{data.data}\n")
 
     def load(self, path: str):
-        with open(path, "tr") as f:
-            while (date_string := f.readline().strip()) and (
-                data_string := f.readline().strip()
-            ):
-                self[datetime.date.fromisoformat(date_string)] = Forecast(data_string)
+        try:
+            with open(path, "tr") as f:
+                while (date_string := f.readline().strip()) and (
+                    data_string := f.readline().strip()
+                ):
+                    self[datetime.date.fromisoformat(date_string)] = Forecast(data_string)
+        except Exception as e:
+            self.warning_log(f"Failed to initialise cache: {e}")
 
 
 class WakeupInfo(typed_hass.Hass):

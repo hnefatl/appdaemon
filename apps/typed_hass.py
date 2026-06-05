@@ -66,8 +66,10 @@ class Hass(hass.Hass):
         entity_id: EntityId,
         attribute: Optional[str] = None,
         default: Optional[str] = None,
+        namespace: Optional[str] = None,
+        copy: Optional[str] = None,
     ) -> str:
-        return super().get_state(entity_id, attribute, default)
+        return super().get_state(entity_id, attribute, default, namespace=namespace, copy=copy)
 
     def listen_state(
         self,
