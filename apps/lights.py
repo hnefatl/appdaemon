@@ -339,6 +339,7 @@ class Lights(typed_hass.Hass):
                 name="living_room",
                 no_motion_timeout=datetime.timedelta(minutes=15),
                 motion_sensors={
+                    BinarySensor("living_room_satellite_room_presence"),
                     BinarySensor("living_room_motion_occupancy"),
                     BinarySensor("pc_motion_occupancy"),
                 },
