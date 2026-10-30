@@ -110,6 +110,7 @@ class Room(abc.ABC):
         name: str,
         no_motion_timeout: datetime.timedelta,
         motion_sensors: Optional[set[EntityId]] = None,
+        delay_motion_sensors: Optional[dict[EntityId, datetime.timedelta]] = None,
         activity_sensors: Optional[list[ActivitySensor]] = None,
         lights_only_if: Optional[list[ActivitySensor]] = None,
         has_manual_control_toggle: bool = False,
@@ -133,12 +134,20 @@ class Room(abc.ABC):
 
         if motion_sensors is None:
             motion_sensors = {BinarySensor(f"{name}_motion_occupancy")}
-        # Entities indicating motion within the room.
-        self._motion_sensors = motion_sensors
+        if delay_motion_sensors is None:
+            delay_motion_sensors = {}
+        # Motion sensor IDs with how long they need to remain on before it
+        # counts as motion.
+        self._motion_sensors = dict[EntityId, Optional[datetime.timedelta]]()
+        for m in motion_sensors:
+            self._motion_sensors[m] = None
+        for m,d in delay_motion_sensors.items():
+            self._motion_sensors[m] = d
+
         # The last time there was motion in the room. Homeassistant "are lights
         # on" queries can have a bit of lag due to e.g. light transitions.
         self._last_motions = {
-            sensor: datetime.datetime.min for sensor in motion_sensors
+            sensor: datetime.datetime.min for sensor in self._motion_sensors
         }
 
         # Whether this model thinks the lights are on: if we tell HA to turn off
@@ -150,9 +159,12 @@ class Room(abc.ABC):
         self._lights_on = not self._are_lights_off()
 
     def initialise(self, hass: typed_hass.Hass):
-        for motion_sensor in self._motion_sensors:
+        for motion_sensor, duration in self._motion_sensors.items():
             hass.listen_state(
-                callback=self.on_room_motion, entity_id=motion_sensor, new="on"
+                callback=self.on_room_motion,
+                entity_id=motion_sensor,
+                new="on",
+                duration=duration,
             )
             hass.listen_state(
                 callback=self.on_room_no_motion,
@@ -339,9 +351,13 @@ class Lights(typed_hass.Hass):
                 name="living_room",
                 no_motion_timeout=datetime.timedelta(minutes=15),
                 motion_sensors={
-                    BinarySensor("living_room_satellite_room_presence"),
                     BinarySensor("living_room_motion_occupancy"),
                     BinarySensor("pc_motion_occupancy"),
+                },
+                delay_motion_sensors={
+                    # The mmwave sensor has lots of false positives, so require
+                    # 30s on before treating it as real.
+                    BinarySensor("living_room_satellite_room_presence"): datetime.timedelta(seconds=30),
                 },
                 activity_sensors=[
                     ActivitySensor.isnt_off(MediaPlayer("shield")),
