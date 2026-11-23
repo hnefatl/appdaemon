@@ -2,10 +2,6 @@ typed_hass:
   module: typed_hass
   global: true
 
-zha_buttons:
-  module: zha_buttons
-  class: ZhaButtonEvents
-
 default_scene_service:
   module: default_scene_service
   class: DefaultSceneService
@@ -17,10 +13,6 @@ lights:
   log_level: WARNING
   # While debugging why lights turn off despite PC being on
   # log_level: INFO
-
-remotes:
-  module: remotes
-  class: Remotes
 
 caramelldansen:
   module: caramelldansen
