@@ -85,6 +85,12 @@ class ActivitySensor:
         )
 
     @staticmethod
+    def isnt_idle(entity: EntityId) -> ActivitySensor:
+        return ActivitySensor._single_entity_predicate(
+            entity, lambda s: s != "idle", descriptor="isn't idle"
+        )
+
+    @staticmethod
     def compared_to(
         entity: EntityId,
         other: EntityId,
@@ -357,12 +363,13 @@ class Lights(typed_hass.Hass):
                 delay_motion_sensors={
                     # The mmwave sensor has lots of false positives, so require
                     # 30s on before treating it as real.
-                    BinarySensor("living_room_satellite_room_presence"): datetime.timedelta(seconds=30),
+                    # TODO: tune or disable?
+                    BinarySensor("living_room_satellite_room_presence"): datetime.timedelta(minutes=1),
                 },
                 activity_sensors=[
                     ActivitySensor.isnt_off(MediaPlayer("shield")),
                     ActivitySensor.isnt_off(BinarySensor("ping_nintendo_switch")),
-                    ActivitySensor.isnt_off(MediaPlayer("living_room_speaker")),
+                    ActivitySensor.isnt_idle(MediaPlayer("living_room_satellite_media_player")),
                     ActivitySensor.is_on(Switch("pc")),
                 ],
                 has_manual_control_toggle=True,
