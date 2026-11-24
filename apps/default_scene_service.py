@@ -84,11 +84,11 @@ class DefaultSceneService(typed_hass.Hass):
         if room is Room.LIVING_ROOM and self._get_boolean_state(
             BinarySensor("octoprint_printing")
         ):
-            return Scene(f"{room.name.lower()}_bright")
+            return Scene(f"{room.name.lower()}_lights_0_bright")
 
         # In the late evening and early morning, default to dim lights in all rooms.
         if nighttime_lights_enabled and between_hours(hour, 0, 6):
-            return Scene(f"{room.name.lower()}_dim")
+            return Scene(f"{room.name.lower()}_lights_1_dim")
 
         # In the bedroom, if still in "asleep mode" then always do dim.
         if room is Room.BEDROOM and not keith_awake:
@@ -96,7 +96,7 @@ class DefaultSceneService(typed_hass.Hass):
 
         # Special override for skipping the fancy lights and always being ~bright.
         if self._get_boolean_state(InputBoolean("bright_lights")):
-            return Scene(f"{room.name.lower()}_bright")
+            return Scene(f"{room.name.lower()}_lights_0_bright")
 
         if room is Room.LIVING_ROOM:
             return get_day_stable_random_uniform(
@@ -127,7 +127,7 @@ class DefaultSceneService(typed_hass.Hass):
                 },
             )
         else:
-            return Scene(f"{room.name.lower()}_bright")
+            return Scene(f"{room.name.lower()}_lights_0_bright")
 
     def _turn_on_default_scene(self, _event_name: str, data: Dict[str, Any], *_: Any):
         room_names = data.get("rooms", None)
